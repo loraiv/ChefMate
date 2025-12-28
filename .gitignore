@@ -1,33 +1,32 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+﻿# Android специфични
+android/.gradle/
+android/.idea/
+android/.kotlin/
+android/build/
+android/*.iml
+android/local.properties
+android/gradle.properties
+android/.DS_Store
+android/captures/
+android/.externalNativeBuild/
+android/app/build/
+android/app/.cxx/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Бекенд специфични
+backend/node_modules/
+backend/.env
+backend/.env.local
+backend/.vscode/
+backend/dist/
+backend/coverage/
+backend/.DS_Store
+backend/.nyc_output/
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
+# Общи
+.DS_Store
+*.log
+*.tmp
+*.temp
+Thumbs.db
+.idea/
 .vscode/
