@@ -3,6 +3,7 @@ package com.chefmate.backend.controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+<<<<<<< HEAD
 import java.time.LocalDateTime;
 
 @RestController
@@ -23,10 +24,24 @@ public class TestController {
                
                Ready to build amazing recipes! 🥘
                """.formatted(LocalDateTime.now());
+=======
+
+@RestController
+@RequestMapping("/api")
+public class TestController {
+
+    @GetMapping("/test")
+    public String test() {
+        return "ChefMate Backend is working!";
+>>>>>>> shopping-list
     }
 
     @GetMapping("/health")
     public String health() {
+<<<<<<< HEAD
         return "{\"status\":\"UP\",\"database\":\"connected\"}";
+=======
+        return "{\"status\": \"UP\", \"service\": \"ChefMate Backend\"}";
+>>>>>>> shopping-list
     }
 }
