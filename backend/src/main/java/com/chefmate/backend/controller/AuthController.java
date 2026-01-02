@@ -27,12 +27,27 @@ public class AuthController {
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
             var user = userService.registerUser(request);
-            return ResponseEntity.ok(
-                    "Успешна регистрация!\n" +
-                            "ID: " + user.getId() + "\n" +
-                            "Потребител: " + user.getUsername() + "\n" +
-                            "Имейл: " + user.getEmail()
-            );
+            
+            // Създава AuthResponse обект (като при login)
+            org.springframework.security.core.userdetails.UserDetails userDetails = 
+                org.springframework.security.core.userdetails.User.builder()
+                    .username(user.getUsername())
+                    .password(user.getPassword())
+                    .authorities("ROLE_USER")
+                    .build();
+            
+            String token = userService.generateTokenForUser(userDetails, user.getId());
+            
+            AuthResponse response = new AuthResponse();
+            response.setToken(token);
+            response.setType("Bearer");
+            response.setId(user.getId());
+            response.setUsername(user.getUsername());
+            response.setEmail(user.getEmail());
+            response.setFirstName(user.getFirstName());
+            response.setLastName(user.getLastName());
+            
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body("Грешка: " + e.getMessage());
         }

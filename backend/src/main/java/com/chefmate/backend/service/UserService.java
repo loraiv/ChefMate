@@ -8,6 +8,8 @@ import com.chefmate.backend.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class UserService {
 
@@ -24,17 +26,33 @@ public class UserService {
     }
 
     public User registerUser(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
+        String username = request.getUsername();
+        String email = request.getEmail();
+        
+        if (username == null || username.trim().isEmpty()) {
+            throw new RuntimeException("Username cannot be empty!");
+        }
+        
+        if (email == null || email.trim().isEmpty()) {
+            throw new RuntimeException("Email cannot be empty!");
+        }
+        
+        username = username.trim();
+        email = email.trim().toLowerCase();
+        
+        Optional<User> existingUserByUsername = userRepository.findByUsername(username);
+        if (existingUserByUsername.isPresent()) {
             throw new RuntimeException("Username is already taken!");
         }
 
-        if (userRepository.existsByEmail(request.getEmail())) {
+        Optional<User> existingUserByEmail = userRepository.findByEmail(email);
+        if (existingUserByEmail.isPresent()) {
             throw new RuntimeException("Email is already in use!");
         }
 
         User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
+        user.setUsername(username);
+        user.setEmail(email);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
@@ -72,5 +90,9 @@ public class UserService {
         response.setLastName(user.getLastName());
 
         return response;
+    }
+
+    public String generateTokenForUser(org.springframework.security.core.userdetails.UserDetails userDetails, Long userId) {
+        return jwtService.generateToken(userDetails, userId);
     }
 }
