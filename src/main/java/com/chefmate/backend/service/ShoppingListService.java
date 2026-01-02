@@ -1,9 +1,14 @@
 package com.chefmate.backend.service;
 
+import com.chefmate.backend.dto.ShoppingListItemResponse;
 import com.chefmate.backend.dto.ShoppingListRequest;
 import com.chefmate.backend.dto.ShoppingListResponse;
+import com.chefmate.backend.entity.Recipe;
 import com.chefmate.backend.entity.ShoppingList;
+import com.chefmate.backend.entity.ShoppingListItem;
 import com.chefmate.backend.entity.User;
+import com.chefmate.backend.repository.RecipeRepository;
+import com.chefmate.backend.repository.ShoppingListItemRepository;
 import com.chefmate.backend.repository.ShoppingListRepository;
 import com.chefmate.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ShoppingListService {
@@ -24,14 +29,18 @@ public class ShoppingListService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private ShoppingListItemRepository shoppingListItemRepository;
+
+    @Autowired
+    private RecipeRepository recipeRepository;
+
     @Transactional
     public ShoppingListResponse createShoppingList(ShoppingListRequest request, Long userId) {
         try {
-            // Намери потребителя
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Създай списък
             ShoppingList shoppingList = new ShoppingList();
             shoppingList.setName(request.getName());
             shoppingList.setUser(user);
@@ -40,7 +49,6 @@ public class ShoppingListService {
 
             ShoppingList savedList = shoppingListRepository.save(shoppingList);
 
-            // Създай response
             ShoppingListResponse response = new ShoppingListResponse();
             response.setId(savedList.getId());
             response.setName(savedList.getName());
@@ -55,67 +63,72 @@ public class ShoppingListService {
         }
     }
 
-    // Добавете тези методи, които липсват в ShoppingListController
+    @Transactional
     public ShoppingListResponse createFromRecipe(Long recipeId, Long userId) {
-        // Временна имплементация
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        Recipe recipe = recipeRepository.findById(recipeId)
+                .orElseThrow(() -> new RuntimeException("Recipe not found"));
+
         ShoppingList shoppingList = new ShoppingList();
-        shoppingList.setName("Списък от рецепта #" + recipeId);
+        shoppingList.setName("Списък от: " + recipe.getTitle());
         shoppingList.setUser(user);
         shoppingList.setCreatedAt(LocalDateTime.now());
         shoppingList.setCompleted(false);
 
         ShoppingList savedList = shoppingListRepository.save(shoppingList);
 
-        ShoppingListResponse response = new ShoppingListResponse();
-        response.setId(savedList.getId());
-        response.setName(savedList.getName());
-        response.setUsername(savedList.getUser().getUsername());
-        response.setCreatedAt(savedList.getCreatedAt());
-        response.setCompleted(savedList.getCompleted());
-        response.setItems(new ArrayList<>());
+        List<ShoppingListItem> items = new ArrayList<>();
+        if (recipe.getIngredients() != null) {
+            for (String ingredient : recipe.getIngredients()) {
+                ShoppingListItem item = new ShoppingListItem();
+                item.setName(ingredient);
+                item.setQuantity("");
+                item.setUnit("");
+                item.setPurchased(false);
+                item.setShoppingList(savedList);
+                item.setRecipe(recipe);
+                items.add(item);
+            }
+        }
+        shoppingListItemRepository.saveAll(items);
 
-        return response;
+        return convertToResponse(savedList);
+    }
+
+    public ShoppingListResponse getMyShoppingList(Long userId) {
+        List<ShoppingList> activeLists = shoppingListRepository.findByUserIdAndCompleted(userId, false);
+        
+        if (activeLists.isEmpty()) {
+            ShoppingList newList = new ShoppingList();
+            newList.setName("Моят списък");
+            newList.setUser(userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found")));
+            newList.setCreatedAt(LocalDateTime.now());
+            newList.setCompleted(false);
+            activeLists.add(shoppingListRepository.save(newList));
+        }
+
+        return convertToResponse(activeLists.get(0));
     }
 
     public List<ShoppingListResponse> getUserShoppingLists(Long userId) {
         List<ShoppingList> lists = shoppingListRepository.findByUserId(userId);
-        List<ShoppingListResponse> responses = new ArrayList<>();
-
-        for (ShoppingList list : lists) {
-            ShoppingListResponse response = new ShoppingListResponse();
-            response.setId(list.getId());
-            response.setName(list.getName());
-            response.setUsername(list.getUser().getUsername());
-            response.setCreatedAt(list.getCreatedAt());
-            response.setCompleted(list.getCompleted());
-            response.setItems(new ArrayList<>());
-            responses.add(response);
-        }
-
-        return responses;
+        return lists.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     public ShoppingListResponse getShoppingListById(Long listId, Long userId) {
         ShoppingList shoppingList = shoppingListRepository.findById(listId)
                 .orElseThrow(() -> new RuntimeException("Shopping list not found"));
 
-        // Проверка за собственост
         if (!shoppingList.getUser().getId().equals(userId)) {
             throw new RuntimeException("Not authorized to access this shopping list");
         }
 
-        ShoppingListResponse response = new ShoppingListResponse();
-        response.setId(shoppingList.getId());
-        response.setName(shoppingList.getName());
-        response.setUsername(shoppingList.getUser().getUsername());
-        response.setCreatedAt(shoppingList.getCreatedAt());
-        response.setCompleted(shoppingList.getCompleted());
-        response.setItems(new ArrayList<>());
-
-        return response;
+        return convertToResponse(shoppingList);
     }
 
     @Transactional
@@ -123,7 +136,6 @@ public class ShoppingListService {
         ShoppingList shoppingList = shoppingListRepository.findById(listId)
                 .orElseThrow(() -> new RuntimeException("Shopping list not found"));
 
-        // Проверка за собственост
         if (!shoppingList.getUser().getId().equals(userId)) {
             throw new RuntimeException("Not authorized to update this shopping list");
         }
@@ -131,15 +143,7 @@ public class ShoppingListService {
         shoppingList.setName(request.getName());
         ShoppingList updatedList = shoppingListRepository.save(shoppingList);
 
-        ShoppingListResponse response = new ShoppingListResponse();
-        response.setId(updatedList.getId());
-        response.setName(updatedList.getName());
-        response.setUsername(updatedList.getUser().getUsername());
-        response.setCreatedAt(updatedList.getCreatedAt());
-        response.setCompleted(updatedList.getCompleted());
-        response.setItems(new ArrayList<>());
-
-        return response;
+        return convertToResponse(updatedList);
     }
 
     @Transactional
@@ -147,7 +151,6 @@ public class ShoppingListService {
         ShoppingList shoppingList = shoppingListRepository.findById(listId)
                 .orElseThrow(() -> new RuntimeException("Shopping list not found"));
 
-        // Проверка за собственост
         if (!shoppingList.getUser().getId().equals(userId)) {
             throw new RuntimeException("Not authorized to delete this shopping list");
         }
@@ -155,20 +158,12 @@ public class ShoppingListService {
         shoppingListRepository.delete(shoppingList);
     }
 
-    // Този метод не е нужен засега - коментирайте го или премахнете
-    /*
-    public ShoppingListItemResponse toggleItemPurchased(Long itemId, Long userId) {
-        // TODO: Имплементирай когато имаш ShoppingListItemRepository
-        throw new RuntimeException("Not implemented yet");
-    }
-    */
 
     @Transactional
     public ShoppingListResponse markListCompleted(Long listId, Long userId, Boolean completed) {
         ShoppingList shoppingList = shoppingListRepository.findById(listId)
                 .orElseThrow(() -> new RuntimeException("Shopping list not found"));
 
-        // Проверка за собственост
         if (!shoppingList.getUser().getId().equals(userId)) {
             throw new RuntimeException("Not authorized to modify this list");
         }
@@ -176,13 +171,73 @@ public class ShoppingListService {
         shoppingList.setCompleted(completed);
         ShoppingList updatedList = shoppingListRepository.save(shoppingList);
 
+        return convertToResponse(updatedList);
+    }
+
+    @Transactional
+    public ShoppingListItemResponse updateShoppingListItem(Long listId, Long itemId, com.chefmate.backend.entity.ShoppingListItem itemUpdate, Long userId) {
+        ShoppingList shoppingList = shoppingListRepository.findById(listId)
+                .orElseThrow(() -> new RuntimeException("Shopping list not found"));
+
+        if (!shoppingList.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Not authorized to modify this list");
+        }
+
+        ShoppingListItem item = shoppingListItemRepository.findById(itemId)
+                .orElseThrow(() -> new RuntimeException("Item not found"));
+
+        if (itemUpdate.getName() != null) item.setName(itemUpdate.getName());
+        if (itemUpdate.getQuantity() != null) item.setQuantity(itemUpdate.getQuantity());
+        if (itemUpdate.getUnit() != null) item.setUnit(itemUpdate.getUnit());
+        if (itemUpdate.getPurchased() != null) item.setPurchased(itemUpdate.getPurchased());
+
+        ShoppingListItem updatedItem = shoppingListItemRepository.save(item);
+        return convertItemToResponse(updatedItem);
+    }
+
+    @Transactional
+    public void deleteShoppingListItem(Long listId, Long itemId, Long userId) {
+        ShoppingList shoppingList = shoppingListRepository.findById(listId)
+                .orElseThrow(() -> new RuntimeException("Shopping list not found"));
+
+        if (!shoppingList.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Not authorized to modify this list");
+        }
+
+        ShoppingListItem item = shoppingListItemRepository.findById(itemId)
+                .orElseThrow(() -> new RuntimeException("Item not found"));
+
+        shoppingListItemRepository.delete(item);
+    }
+
+    private ShoppingListResponse convertToResponse(ShoppingList shoppingList) {
         ShoppingListResponse response = new ShoppingListResponse();
-        response.setId(updatedList.getId());
-        response.setName(updatedList.getName());
-        response.setUsername(updatedList.getUser().getUsername());
-        response.setCreatedAt(updatedList.getCreatedAt());
-        response.setCompleted(updatedList.getCompleted());
-        response.setItems(new ArrayList<>());
+        response.setId(shoppingList.getId());
+        response.setName(shoppingList.getName());
+        response.setUsername(shoppingList.getUser().getUsername());
+        response.setCreatedAt(shoppingList.getCreatedAt());
+        response.setCompleted(shoppingList.getCompleted());
+
+        List<ShoppingListItem> items = shoppingListItemRepository.findByShoppingListId(shoppingList.getId());
+        response.setItems(items.stream()
+                .map(this::convertItemToResponse)
+                .collect(Collectors.toList()));
+
+        return response;
+    }
+
+    private ShoppingListItemResponse convertItemToResponse(ShoppingListItem item) {
+        ShoppingListItemResponse response = new ShoppingListItemResponse();
+        response.setId(item.getId());
+        response.setName(item.getName());
+        response.setQuantity(item.getQuantity());
+        response.setUnit(item.getUnit());
+        response.setPurchased(item.getPurchased());
+        
+        if (item.getRecipe() != null) {
+            response.setRecipeId(item.getRecipe().getId());
+            response.setRecipeName(item.getRecipe().getTitle());
+        }
 
         return response;
     }

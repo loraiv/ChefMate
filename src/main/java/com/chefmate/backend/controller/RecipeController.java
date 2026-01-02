@@ -1,98 +1,196 @@
 package com.chefmate.backend.controller;
 
+import com.chefmate.backend.dto.CommentResponse;
 import com.chefmate.backend.dto.RecipeRequest;
 import com.chefmate.backend.dto.RecipeResponse;
+import com.chefmate.backend.service.JwtService;
 import com.chefmate.backend.service.RecipeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/recipes")
 public class RecipeController {
 
     private final RecipeService recipeService;
+    private final JwtService jwtService;
 
-    public RecipeController(RecipeService recipeService) {
+    public RecipeController(RecipeService recipeService, JwtService jwtService) {
         this.recipeService = recipeService;
+        this.jwtService = jwtService;
     }
 
-    // Създаване на нова рецепта
+    private Long getUserIdFromToken(String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        try {
+            return jwtService.extractUserId(token);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @PostMapping
     public ResponseEntity<RecipeResponse> createRecipe(
             @RequestBody RecipeRequest request,
-            @RequestHeader("User-Id") Long userId) {
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        
+        Long userId = getUserIdFromToken(token);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         RecipeResponse response = recipeService.createRecipe(request, userId);
         return ResponseEntity.ok(response);
     }
 
-    // Взимане на всички рецепти
     @GetMapping
-    public ResponseEntity<List<RecipeResponse>> getAllRecipes() {
-        List<RecipeResponse> recipes = recipeService.getAllRecipes();
+    public ResponseEntity<List<RecipeResponse>> getAllRecipes(
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        
+        Long currentUserId = getUserIdFromToken(token);
+        List<RecipeResponse> recipes = recipeService.getAllRecipes(currentUserId);
         return ResponseEntity.ok(recipes);
     }
 
-    // Взимане на рецепта по ID
     @GetMapping("/{id}")
-    public ResponseEntity<RecipeResponse> getRecipeById(@PathVariable Long id) {
-        RecipeResponse recipe = recipeService.getRecipeById(id);
+    public ResponseEntity<RecipeResponse> getRecipeById(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        
+        Long currentUserId = getUserIdFromToken(token);
+        RecipeResponse recipe = recipeService.getRecipeById(id, currentUserId);
         return ResponseEntity.ok(recipe);
     }
 
-    // Взимане на рецепти на конкретен потребител
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<RecipeResponse>> getUserRecipes(@PathVariable Long userId) {
-        List<RecipeResponse> recipes = recipeService.getUserRecipes(userId);
+    @PutMapping("/{id}")
+    public ResponseEntity<RecipeResponse> updateRecipe(
+            @PathVariable Long id,
+            @RequestBody RecipeRequest request,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        
+        Long userId = getUserIdFromToken(token);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            RecipeResponse response = recipeService.updateRecipe(id, request, userId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteRecipe(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        
+        Long userId = getUserIdFromToken(token);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            recipeService.deleteRecipe(id, userId);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).build();
+        }
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<RecipeResponse>> searchRecipes(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String difficulty,
+            @RequestParam(required = false) Integer maxTime,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        
+        Long currentUserId = getUserIdFromToken(token);
+        List<RecipeResponse> recipes = recipeService.searchRecipes(query, difficulty, maxTime, currentUserId);
         return ResponseEntity.ok(recipes);
     }
 
-    // Тестов endpoint
+    @PostMapping("/{recipeId}/like")
+    public ResponseEntity<Void> likeRecipe(
+            @PathVariable Long recipeId,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        
+        Long userId = getUserIdFromToken(token);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            recipeService.likeRecipe(recipeId, userId);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).build();
+        }
+    }
+
+    @DeleteMapping("/{recipeId}/like")
+    public ResponseEntity<Void> unlikeRecipe(
+            @PathVariable Long recipeId,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        
+        Long userId = getUserIdFromToken(token);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            recipeService.unlikeRecipe(recipeId, userId);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).build();
+        }
+    }
+
+    @GetMapping("/{recipeId}/comments")
+    public ResponseEntity<List<CommentResponse>> getRecipeComments(
+            @PathVariable Long recipeId,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        
+        try {
+            List<CommentResponse> comments = recipeService.getRecipeComments(recipeId);
+            return ResponseEntity.ok(comments);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).build();
+        }
+    }
+
+    @PostMapping("/{recipeId}/comments")
+    public ResponseEntity<CommentResponse> addComment(
+            @PathVariable Long recipeId,
+            @RequestBody Map<String, String> request,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        
+        Long userId = getUserIdFromToken(token);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        String content = request.get("content");
+        if (content == null || content.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            CommentResponse response = recipeService.addComment(recipeId, content, userId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).build();
+        }
+    }
+
     @GetMapping("/test")
     public String test() {
         return "Recipe controller is working!";
     }
-
-    // КОМЕНТИРАЙ тези методи засега - нямаме ги в RecipeService
-    /*
-    // Качване на снимка за рецепта
-    @PostMapping("/{id}/upload-image")
-    public ResponseEntity<RecipeResponse> uploadImage(
-            @PathVariable Long id,
-            @RequestParam("image") MultipartFile file) {
-
-        try {
-            RecipeResponse response = recipeService.uploadRecipeImage(id, file);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(null);
-        }
-    }
-
-    // Тест за качване на файл
-    @PostMapping("/test-upload")
-    public ResponseEntity<String> testUpload(@RequestParam("file") MultipartFile file) {
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("Файлът е празен");
-        }
-
-        return ResponseEntity.ok("Файлът е получен: " + file.getOriginalFilename() +
-                ", Размер: " + file.getSize() + " байта");
-    }
-
-    // Изтриване на снимка
-    @DeleteMapping("/{id}/image")
-    public ResponseEntity<Void> deleteImage(@PathVariable Long id) {
-        try {
-            recipeService.deleteRecipeImage(id);
-            return ResponseEntity.ok().build();
-        } catch (IOException e) {
-            return ResponseEntity.status(500).build();
-        }
-    }
-    */
 }

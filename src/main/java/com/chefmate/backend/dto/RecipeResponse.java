@@ -21,8 +21,8 @@ public class RecipeResponse {
     private LocalDateTime updatedAt;
     private Integer likesCount;
     private Integer viewsCount;
+    private Boolean isLiked = false;
 
-    // Getters
     public Long getId() { return id; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
@@ -40,6 +40,7 @@ public class RecipeResponse {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public Integer getLikesCount() { return likesCount; }
     public Integer getViewsCount() { return viewsCount; }
+    public Boolean getIsLiked() { return isLiked; }
 
     // Setters
     public void setId(Long id) { this.id = id; }
@@ -59,4 +60,5 @@ public class RecipeResponse {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public void setLikesCount(Integer likesCount) { this.likesCount = likesCount; }
     public void setViewsCount(Integer viewsCount) { this.viewsCount = viewsCount; }
+    public void setIsLiked(Boolean isLiked) { this.isLiked = isLiked; }
 }

@@ -1,44 +1,53 @@
 package com.chefmate.backend.service;
 
+import com.chefmate.backend.dto.CommentResponse;
 import com.chefmate.backend.dto.RecipeRequest;
 import com.chefmate.backend.dto.RecipeResponse;
+import com.chefmate.backend.entity.Comment;
 import com.chefmate.backend.entity.Recipe;
+import com.chefmate.backend.entity.RecipeLike;
 import com.chefmate.backend.entity.User;
+import com.chefmate.backend.repository.CommentRepository;
+import com.chefmate.backend.repository.RecipeLikeRepository;
 import com.chefmate.backend.repository.RecipeRepository;
 import com.chefmate.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class RecipeService {
 
     private final RecipeRepository recipeRepository;
     private final UserRepository userRepository;
+    private final RecipeLikeRepository recipeLikeRepository;
+    private final CommentRepository commentRepository;
 
-    // Времено без FileStorageService
     public RecipeService(RecipeRepository recipeRepository,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         RecipeLikeRepository recipeLikeRepository,
+                         CommentRepository commentRepository) {
         this.recipeRepository = recipeRepository;
         this.userRepository = userRepository;
+        this.recipeLikeRepository = recipeLikeRepository;
+        this.commentRepository = commentRepository;
     }
 
     @Transactional
     public RecipeResponse createRecipe(RecipeRequest request, Long userId) {
-        // Намери потребителя
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
 
-        // Създай нова рецепта
         Recipe recipe = new Recipe();
         recipe.setTitle(request.getTitle());
         recipe.setDescription(request.getDescription());
         recipe.setPrepTime(request.getPrepTime());
         recipe.setCookTime(request.getCookTime());
 
-        // Автоматично изчисли общо време
         Integer totalTime = 0;
         if (request.getPrepTime() != null) {
             totalTime += request.getPrepTime();
@@ -50,11 +59,8 @@ public class RecipeService {
 
         recipe.setServings(request.getServings());
 
-// В createRecipe метода, променете тази част:
-// Конвертирай difficulty от String към enum
         if (request.getDifficulty() != null) {
             try {
-                // Използвайте правилния път към Difficulty
                 Recipe.Difficulty difficultyEnum = Recipe.Difficulty.valueOf(
                         request.getDifficulty().toUpperCase()
                 );
@@ -71,61 +77,192 @@ public class RecipeService {
                 request.getSteps() : new ArrayList<>());
         recipe.setUser(user);
 
-        // Запази рецептата
         Recipe savedRecipe = recipeRepository.save(recipe);
 
-        // Върни response
-        return convertToResponse(savedRecipe);
+        return convertToResponse(savedRecipe, userId);
     }
 
-    public List<RecipeResponse> getAllRecipes() {
+    public List<RecipeResponse> getAllRecipes(Long currentUserId) {
         List<Recipe> recipes = recipeRepository.findAll();
-        List<RecipeResponse> responses = new ArrayList<>();
-
-        for (Recipe recipe : recipes) {
-            responses.add(convertToResponse(recipe));
-        }
-
-        return responses;
+        return recipes.stream()
+                .map(recipe -> convertToResponse(recipe, currentUserId))
+                .collect(Collectors.toList());
     }
 
-    public RecipeResponse getRecipeById(Long id) {
+    public RecipeResponse getRecipeById(Long id, Long currentUserId) {
         Recipe recipe = recipeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Recipe not found with ID: " + id));
 
-        // Увеличи брояча на прегледи
         Integer currentViews = recipe.getViewsCount() != null ? recipe.getViewsCount() : 0;
         recipe.setViewsCount(currentViews + 1);
         recipeRepository.save(recipe);
 
-        return convertToResponse(recipe);
+        return convertToResponse(recipe, currentUserId);
     }
 
-    public List<RecipeResponse> getUserRecipes(Long userId) {
+    public List<RecipeResponse> getUserRecipes(Long userId, Long currentUserId) {
         List<Recipe> recipes = recipeRepository.findByUserId(userId);
-        List<RecipeResponse> responses = new ArrayList<>();
+        return recipes.stream()
+                .map(recipe -> convertToResponse(recipe, currentUserId))
+                .collect(Collectors.toList());
+    }
 
-        for (Recipe recipe : recipes) {
-            responses.add(convertToResponse(recipe));
+    @Transactional
+    public RecipeResponse updateRecipe(Long id, RecipeRequest request, Long userId) {
+        Recipe recipe = recipeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Recipe not found with ID: " + id));
+
+        if (!recipe.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Not authorized to update this recipe");
         }
 
-        return responses;
+        recipe.setTitle(request.getTitle());
+        recipe.setDescription(request.getDescription());
+        recipe.setPrepTime(request.getPrepTime());
+        recipe.setCookTime(request.getCookTime());
+        
+        Integer totalTime = 0;
+        if (request.getPrepTime() != null) totalTime += request.getPrepTime();
+        if (request.getCookTime() != null) totalTime += request.getCookTime();
+        recipe.setTotalTime(totalTime);
+        
+        recipe.setServings(request.getServings());
+        
+        if (request.getDifficulty() != null) {
+            try {
+                recipe.setDifficulty(Recipe.Difficulty.valueOf(request.getDifficulty().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                recipe.setDifficulty(Recipe.Difficulty.EASY);
+            }
+        }
+        
+        recipe.setIngredients(request.getIngredients() != null ? request.getIngredients() : new ArrayList<>());
+        recipe.setSteps(request.getSteps() != null ? request.getSteps() : new ArrayList<>());
+        recipe.setUpdatedAt(LocalDateTime.now());
+
+        Recipe updatedRecipe = recipeRepository.save(recipe);
+        return convertToResponse(updatedRecipe, userId);
     }
 
-    // Времено коментирай методите за снимки
-    /*
-    public RecipeResponse uploadRecipeImage(Long recipeId, MultipartFile file) throws IOException {
-        // TODO: Имплементирай когато имаш FileStorageService
-        throw new RuntimeException("Not implemented yet");
+    @Transactional
+    public void deleteRecipe(Long id, Long userId) {
+        Recipe recipe = recipeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Recipe not found with ID: " + id));
+
+        if (!recipe.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Not authorized to delete this recipe");
+        }
+
+        recipeRepository.delete(recipe);
     }
 
-    public void deleteRecipeImage(Long recipeId) throws IOException {
-        // TODO: Имплементирай когато имаш FileStorageService
-        throw new RuntimeException("Not implemented yet");
+    public List<RecipeResponse> searchRecipes(String query, String difficulty, Integer maxTime, Long currentUserId) {
+        List<Recipe> recipes = recipeRepository.findAll();
+        
+        return recipes.stream()
+                .filter(recipe -> {
+                    if (query != null && !query.isEmpty()) {
+                        if (!recipe.getTitle().toLowerCase().contains(query.toLowerCase()) &&
+                            !recipe.getDescription().toLowerCase().contains(query.toLowerCase())) {
+                            return false;
+                        }
+                    }
+                    
+                    if (difficulty != null && !difficulty.isEmpty()) {
+                        try {
+                            Recipe.Difficulty diff = Recipe.Difficulty.valueOf(difficulty.toUpperCase());
+                            if (!recipe.getDifficulty().equals(diff)) {
+                                return false;
+                            }
+                        } catch (IllegalArgumentException e) {
+                        }
+                    }
+                    
+                    if (maxTime != null && recipe.getTotalTime() != null) {
+                        if (recipe.getTotalTime() > maxTime) {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                })
+                .map(recipe -> convertToResponse(recipe, currentUserId))
+                .collect(Collectors.toList());
     }
-    */
 
-    private RecipeResponse convertToResponse(Recipe recipe) {
+    @Transactional
+    public void likeRecipe(Long recipeId, Long userId) {
+        Recipe recipe = recipeRepository.findById(recipeId)
+                .orElseThrow(() -> new RuntimeException("Recipe not found"));
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (recipeLikeRepository.existsByRecipeIdAndUserId(recipeId, userId)) {
+            return;
+        }
+
+        RecipeLike like = new RecipeLike(recipe, user);
+        recipeLikeRepository.save(like);
+
+        Integer currentLikes = recipe.getLikesCount() != null ? recipe.getLikesCount() : 0;
+        recipe.setLikesCount(currentLikes + 1);
+        recipeRepository.save(recipe);
+    }
+
+    @Transactional
+    public void unlikeRecipe(Long recipeId, Long userId) {
+        Recipe recipe = recipeRepository.findById(recipeId)
+                .orElseThrow(() -> new RuntimeException("Recipe not found"));
+
+        recipeLikeRepository.findByRecipeIdAndUserId(recipeId, userId)
+                .ifPresent(like -> {
+                    recipeLikeRepository.delete(like);
+                    
+                    Integer currentLikes = recipe.getLikesCount() != null ? recipe.getLikesCount() : 0;
+                    recipe.setLikesCount(Math.max(0, currentLikes - 1));
+                    recipeRepository.save(recipe);
+                });
+    }
+
+    public List<CommentResponse> getRecipeComments(Long recipeId) {
+        List<Comment> comments = commentRepository.findByRecipeIdOrderByCreatedAtDesc(recipeId);
+        return comments.stream()
+                .map(comment -> {
+                    CommentResponse response = new CommentResponse();
+                    response.setId(comment.getId());
+                    response.setContent(comment.getContent());
+                    response.setUserId(comment.getUser().getId());
+                    response.setUsername(comment.getUser().getUsername());
+                    response.setCreatedAt(comment.getCreatedAt());
+                    return response;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public CommentResponse addComment(Long recipeId, String content, Long userId) {
+        Recipe recipe = recipeRepository.findById(recipeId)
+                .orElseThrow(() -> new RuntimeException("Recipe not found"));
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Comment comment = new Comment(content, recipe, user);
+        Comment savedComment = commentRepository.save(comment);
+
+        CommentResponse response = new CommentResponse();
+        response.setId(savedComment.getId());
+        response.setContent(savedComment.getContent());
+        response.setUserId(savedComment.getUser().getId());
+        response.setUsername(savedComment.getUser().getUsername());
+        response.setCreatedAt(savedComment.getCreatedAt());
+        
+        return response;
+    }
+
+
+    private RecipeResponse convertToResponse(Recipe recipe, Long currentUserId) {
         RecipeResponse response = new RecipeResponse();
         response.setId(recipe.getId());
         response.setTitle(recipe.getTitle());
@@ -148,6 +285,13 @@ public class RecipeService {
 
         response.setLikesCount(likes);
         response.setViewsCount(views);
+        
+        if (currentUserId != null) {
+            boolean isLiked = recipeLikeRepository.existsByRecipeIdAndUserId(recipe.getId(), currentUserId);
+            response.setIsLiked(isLiked);
+        } else {
+            response.setIsLiked(false);
+        }
 
         return response;
     }

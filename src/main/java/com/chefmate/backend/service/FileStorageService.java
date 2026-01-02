@@ -34,17 +34,14 @@ public class FileStorageService {
     }
 
     public String storeFile(MultipartFile file) {
-        // Генериране на уникално име на файла
         String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
         String fileName = UUID.randomUUID().toString() + "_" + originalFileName;
 
         try {
-            // Проверка за невалидни символи в името
             if (fileName.contains("..")) {
                 throw new RuntimeException("Sorry! Filename contains invalid path sequence " + fileName);
             }
 
-            // Копиране на файла в целевата директория
             Path targetLocation = this.fileStorageLocation.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 

@@ -62,7 +62,6 @@ public class Recipe {
     @Column(name = "views_count")
     private Integer viewsCount = 0;
 
-    // Конструктори
     public Recipe() {}
 
     public Recipe(String title, String description, User user) {
@@ -122,4 +121,5 @@ public class Recipe {
     public enum Difficulty {
         EASY, MEDIUM, HARD
     }
+    
 }

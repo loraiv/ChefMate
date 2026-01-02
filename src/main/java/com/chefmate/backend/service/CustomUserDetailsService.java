@@ -12,7 +12,6 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
-    // Конструктор
     public CustomUserDetailsService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }

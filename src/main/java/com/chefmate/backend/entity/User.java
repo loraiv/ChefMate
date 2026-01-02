@@ -50,7 +50,6 @@ public class User {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
-    // Конструктори
     public User() {}
 
     public User(String username, String email, String password,

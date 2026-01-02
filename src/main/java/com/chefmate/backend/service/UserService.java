@@ -15,7 +15,6 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    // Конструктор
     public UserService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService) {
@@ -25,7 +24,6 @@ public class UserService {
     }
 
     public User registerUser(RegisterRequest request) {
-        // Проверка дали потребителят съществува
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("Username is already taken!");
         }
@@ -34,7 +32,6 @@ public class UserService {
             throw new RuntimeException("Email is already in use!");
         }
 
-        // Създаване на нов потребител
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
@@ -46,24 +43,25 @@ public class UserService {
     }
 
     public AuthResponse loginUser(LoginRequest request) {
-        // Вземи стойностите от request
         String usernameOrEmail = request.getUsernameOrEmail();
         String password = request.getPassword();
 
-        // Намери потребителя
         User user = userRepository.findByUsername(usernameOrEmail)
                 .orElseGet(() -> userRepository.findByEmail(usernameOrEmail)
                         .orElseThrow(() -> new RuntimeException("Invalid username/email or password")));
 
-        // Провери паролата
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Invalid username/email or password");
         }
 
-        // Генерирай JWT токен
-        String token = jwtService.generateToken(user.getUsername());
+        org.springframework.security.core.userdetails.UserDetails userDetails = 
+            org.springframework.security.core.userdetails.User.builder()
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .authorities("ROLE_USER")
+                .build();
+        String token = jwtService.generateToken(userDetails, user.getId());
 
-        // Създай AuthResponse (ако builder не работи, използвай конструктор)
         AuthResponse response = new AuthResponse();
         response.setToken(token);
         response.setType("Bearer");
