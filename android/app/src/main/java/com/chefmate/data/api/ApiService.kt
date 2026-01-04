@@ -8,14 +8,21 @@ import retrofit2.http.*
 
 interface ApiService {
 
-    // ========== AUTHENTICATION ==========
     @POST("api/auth/register")
     suspend fun register(@Body registerRequest: RegisterRequest): Response<AuthResponse>
 
     @POST("api/auth/login")
     suspend fun login(@Body loginRequest: LoginRequest): Response<AuthResponse>
 
-    // ========== RECIPES ==========
+    @POST("api/auth/forgot-password")
+    suspend fun forgotPassword(@Body forgotPasswordRequest: ForgotPasswordRequest): Response<Map<String, String>>
+
+    @POST("api/auth/change-password")
+    suspend fun changePassword(
+        @Header("Authorization") token: String,
+        @Body changePasswordRequest: ChangePasswordRequest
+    ): Response<Map<String, String>>
+
     @GET("api/recipes")
     suspend fun getRecipes(
         @Header("Authorization") token: String
@@ -48,7 +55,6 @@ interface ApiService {
         @Path("id") id: Long
     ): Response<Unit>
 
-    // ========== SEARCH & FILTER ==========
     @GET("api/recipes/search")
     suspend fun searchRecipes(
         @Header("Authorization") token: String,
@@ -57,7 +63,6 @@ interface ApiService {
         @Query("maxTime") maxTime: Int? = null
     ): Response<List<RecipeResponse>>
 
-    // ========== SHOPPING LIST ==========
     @POST("api/shopping-lists/create-from-recipe/{recipeId}")
     suspend fun createShoppingListFromRecipe(
         @Header("Authorization") token: String,
@@ -84,14 +89,12 @@ interface ApiService {
         @Path("itemId") itemId: Long
     ): Response<Unit>
 
-    // ========== AI ASSISTANT ==========
     @POST("api/ai/chat")
     suspend fun chatWithAI(
         @Header("Authorization") token: String,
         @Body aiRequest: AiRequest
     ): Response<AiResponse>
 
-    // ========== SOCIAL FEATURES ==========
     @POST("api/recipes/{recipeId}/like")
     suspend fun likeRecipe(
         @Header("Authorization") token: String,
