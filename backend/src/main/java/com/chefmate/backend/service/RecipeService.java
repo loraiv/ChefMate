@@ -82,6 +82,64 @@ public class RecipeService {
         return convertToResponse(savedRecipe, userId);
     }
 
+    @Transactional
+    public RecipeResponse createRecipeWithImage(RecipeRequest request, Long userId, String imageUrl) {
+        List<String> imageUrls = imageUrl != null ? List.of(imageUrl) : new ArrayList<>();
+        return createRecipeWithImages(request, userId, imageUrls);
+    }
+
+    @Transactional
+    public RecipeResponse createRecipeWithImages(RecipeRequest request, Long userId, List<String> imageUrls) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+
+        Recipe recipe = new Recipe();
+        recipe.setTitle(request.getTitle());
+        recipe.setDescription(request.getDescription());
+        recipe.setPrepTime(request.getPrepTime());
+        recipe.setCookTime(request.getCookTime());
+
+        Integer totalTime = 0;
+        if (request.getPrepTime() != null) {
+            totalTime += request.getPrepTime();
+        }
+        if (request.getCookTime() != null) {
+            totalTime += request.getCookTime();
+        }
+        recipe.setTotalTime(totalTime);
+
+        recipe.setServings(request.getServings());
+
+        if (request.getDifficulty() != null) {
+            try {
+                Recipe.Difficulty difficultyEnum = Recipe.Difficulty.valueOf(
+                        request.getDifficulty().toUpperCase()
+                );
+                recipe.setDifficulty(difficultyEnum);
+            } catch (IllegalArgumentException e) {
+                recipe.setDifficulty(Recipe.Difficulty.EASY);
+            }
+        } else {
+            recipe.setDifficulty(Recipe.Difficulty.EASY);
+        }
+        recipe.setIngredients(request.getIngredients() != null ?
+                request.getIngredients() : new ArrayList<>());
+        recipe.setSteps(request.getSteps() != null ?
+                request.getSteps() : new ArrayList<>());
+        recipe.setUser(user);
+        
+        // Set all image URLs
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            recipe.setImageUrls(imageUrls);
+            // Set first image URL for backward compatibility (single imageUrl field)
+            recipe.setImageUrl(imageUrls.get(0));
+        }
+
+        Recipe savedRecipe = recipeRepository.save(recipe);
+
+        return convertToResponse(savedRecipe, userId);
+    }
+
     public List<RecipeResponse> getAllRecipes(Long currentUserId) {
         List<Recipe> recipes = recipeRepository.findAll();
         return recipes.stream()
@@ -153,6 +211,14 @@ public class RecipeService {
             throw new RuntimeException("Not authorized to delete this recipe");
         }
 
+        // Delete all related data first
+        // Delete all likes for this recipe
+        recipeLikeRepository.deleteByRecipeId(id);
+        
+        // Delete all comments for this recipe
+        commentRepository.deleteByRecipeId(id);
+        
+        // Delete the recipe (this will also delete ingredients, steps, and imageUrls via cascade)
         recipeRepository.delete(recipe);
     }
 
@@ -273,10 +339,19 @@ public class RecipeService {
         response.setServings(recipe.getServings());
         response.setDifficulty(recipe.getDifficulty().name());
         response.setImageUrl(recipe.getImageUrl());
+        // Set all image URLs if available, otherwise use single imageUrl
+        if (recipe.getImageUrls() != null && !recipe.getImageUrls().isEmpty()) {
+            response.setImageUrls(recipe.getImageUrls());
+        } else if (recipe.getImageUrl() != null) {
+            response.setImageUrls(List.of(recipe.getImageUrl()));
+        } else {
+            response.setImageUrls(new ArrayList<>());
+        }
         response.setIngredients(recipe.getIngredients());
         response.setSteps(recipe.getSteps());
         response.setUserId(recipe.getUser().getId());
         response.setUsername(recipe.getUser().getUsername());
+        response.setUserProfileImageUrl(recipe.getUser().getProfileImageUrl());
         response.setCreatedAt(recipe.getCreatedAt());
         response.setUpdatedAt(recipe.getUpdatedAt());
 

@@ -6,11 +6,13 @@ import com.chefmate.backend.dto.ForgotPasswordRequest;
 import com.chefmate.backend.dto.LoginRequest;
 import com.chefmate.backend.dto.RegisterRequest;
 import com.chefmate.backend.dto.ResetPasswordRequest;
+import com.chefmate.backend.service.FileStorageService;
 import com.chefmate.backend.service.JwtService;
 import com.chefmate.backend.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,10 +23,12 @@ public class AuthController {
 
     private final UserService userService;
     private final JwtService jwtService;
+    private final FileStorageService fileStorageService;
 
-    public AuthController(UserService userService, JwtService jwtService) {
+    public AuthController(UserService userService, JwtService jwtService, FileStorageService fileStorageService) {
         this.userService = userService;
         this.jwtService = jwtService;
+        this.fileStorageService = fileStorageService;
     }
 
     private Long getUserIdFromToken(String token) {
@@ -146,6 +150,36 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body("Грешка: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Грешка: " + e.getMessage());
+        }
+    }
+
+    @PostMapping(value = "/upload-profile-image", consumes = {"multipart/form-data"})
+    public ResponseEntity<?> uploadProfileImage(
+            @RequestPart("image") MultipartFile image,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        try {
+            Long userId = getUserIdFromToken(token);
+            if (userId == null) {
+                return ResponseEntity.status(401).body("Грешка: Невалиден или липсващ токен!");
+            }
+
+            if (image == null || image.isEmpty()) {
+                return ResponseEntity.badRequest().body("Грешка: Снимката е задължителна!");
+            }
+
+            // Save image file
+            String fileName = fileStorageService.storeFile(image);
+            String imageUrl = "/uploads/" + fileName;
+
+            // Update user profile image URL
+            userService.updateProfileImageUrl(userId, imageUrl);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Профилната снимка е успешно качена!");
+            response.put("imageUrl", imageUrl);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Грешка: " + e.getMessage());
         }

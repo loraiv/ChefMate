@@ -281,6 +281,18 @@ public class UserService {
     }
 
     @Transactional
+    public void updateProfileImageUrl(Long userId, String imageUrl) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found!"));
+        
+        user.setProfileImageUrl(imageUrl);
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+        
+        logger.info("Profile image updated for user ID: {}", userId);
+    }
+
+    @Transactional
     public int deleteAllUsers() {
         logger.info("Starting to delete all users and related data...");
         
