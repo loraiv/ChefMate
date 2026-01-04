@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">ChefMate</string>
+    <string name="login">Вход</string>
+    <string name="register">Регистрация</string>
+    <string name="email">Имейл</string>
+    <string name="password">Парола</string>
+    <string name="welcome">Добре дошли в ChefMate</string>
+</resources>

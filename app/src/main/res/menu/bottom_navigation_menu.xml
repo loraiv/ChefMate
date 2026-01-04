@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/recipeListFragment"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Рецепти" />
+
+    <item
+        android:id="@+id/likedRecipesFragment"
+        android:icon="@android:drawable/btn_star_big_on"
+        android:title="Харесани" />
+
+    <item
+        android:id="@+id/shoppingListFragment"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:title="Пазаруване" />
+
+    <item
+        android:id="@+id/cookingAssistantFragment"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="AI Асистент" />
+</menu>
+
