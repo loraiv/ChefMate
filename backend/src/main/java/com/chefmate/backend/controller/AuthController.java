@@ -1,10 +1,12 @@
 package com.chefmate.backend.controller;
 
 import com.chefmate.backend.dto.AuthResponse;
+import com.chefmate.backend.dto.ChangePasswordRequest;
 import com.chefmate.backend.dto.ForgotPasswordRequest;
 import com.chefmate.backend.dto.LoginRequest;
 import com.chefmate.backend.dto.RegisterRequest;
 import com.chefmate.backend.dto.ResetPasswordRequest;
+import com.chefmate.backend.service.JwtService;
 import com.chefmate.backend.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -18,9 +20,22 @@ import java.util.Map;
 public class AuthController {
 
     private final UserService userService;
+    private final JwtService jwtService;
 
-    public AuthController(UserService userService) {
+    public AuthController(UserService userService, JwtService jwtService) {
         this.userService = userService;
+        this.jwtService = jwtService;
+    }
+
+    private Long getUserIdFromToken(String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        try {
+            return jwtService.extractUserId(token);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @GetMapping("/test")
@@ -105,6 +120,27 @@ public class AuthController {
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         try {
             userService.resetPassword(request.getToken(), request.getNewPassword());
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Паролата е успешно променена!");
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body("Грешка: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Грешка: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        try {
+            Long userId = getUserIdFromToken(token);
+            if (userId == null) {
+                return ResponseEntity.status(401).body("Грешка: Невалиден или липсващ токен!");
+            }
+            
+            userService.changePassword(userId, request.getCurrentPassword(), request.getNewPassword());
             Map<String, String> response = new HashMap<>();
             response.put("message", "Паролата е успешно променена!");
             return ResponseEntity.ok(response);
