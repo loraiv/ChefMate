@@ -98,7 +98,7 @@ public class ShoppingListService {
     }
 
     public ShoppingListResponse getMyShoppingList(Long userId) {
-        List<ShoppingList> activeLists = shoppingListRepository.findByUserIdAndCompleted(userId, false);
+        List<ShoppingList> activeLists = shoppingListRepository.findByUserIdAndCompletedOrderByCreatedAtDesc(userId, false);
         
         if (activeLists.isEmpty()) {
             ShoppingList newList = new ShoppingList();
@@ -107,9 +107,11 @@ public class ShoppingListService {
                     .orElseThrow(() -> new RuntimeException("User not found")));
             newList.setCreatedAt(LocalDateTime.now());
             newList.setCompleted(false);
-            activeLists.add(shoppingListRepository.save(newList));
+            ShoppingList savedList = shoppingListRepository.save(newList);
+            return convertToResponse(savedList);
         }
 
+        // Return the most recent active list (first in the sorted list)
         return convertToResponse(activeLists.get(0));
     }
 

@@ -24,7 +24,6 @@ public class Comment {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // Constructors
     public Comment() {}
 
     public Comment(String content, Recipe recipe, User user) {
@@ -33,7 +32,6 @@ public class Comment {
         this.user = user;
     }
 
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

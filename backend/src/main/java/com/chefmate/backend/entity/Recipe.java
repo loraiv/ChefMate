@@ -37,6 +37,11 @@ public class Recipe {
     private String imageUrl;
 
     @ElementCollection
+    @CollectionTable(name = "recipe_image_urls", joinColumns = @JoinColumn(name = "recipe_id"))
+    @Column(name = "image_url")
+    private List<String> imageUrls = new ArrayList<>();
+
+    @ElementCollection
     @CollectionTable(name = "recipe_ingredients", joinColumns = @JoinColumn(name = "recipe_id"))
     @Column(name = "ingredient")
     private List<String> ingredients = new ArrayList<>();
@@ -80,6 +85,7 @@ public class Recipe {
     public Integer getServings() { return servings; }
     public Difficulty getDifficulty() { return difficulty; }
     public String getImageUrl() { return imageUrl; }
+    public List<String> getImageUrls() { return imageUrls; }
     public List<String> getIngredients() { return ingredients; }
     public List<String> getSteps() { return steps; }
     public User getUser() { return user; }
@@ -103,6 +109,7 @@ public class Recipe {
     public void setServings(Integer servings) { this.servings = servings; }
     public void setDifficulty(Difficulty difficulty) { this.difficulty = difficulty; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
     public void setIngredients(List<String> ingredients) { this.ingredients = ingredients; }
     public void setSteps(List<String> steps) { this.steps = steps; }
     public void setUser(User user) { this.user = user; }

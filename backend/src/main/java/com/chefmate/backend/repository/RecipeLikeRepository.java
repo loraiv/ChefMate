@@ -11,6 +11,7 @@ public interface RecipeLikeRepository extends JpaRepository<RecipeLike, Long> {
     Optional<RecipeLike> findByRecipeIdAndUserId(Long recipeId, Long userId);
     boolean existsByRecipeIdAndUserId(Long recipeId, Long userId);
     long countByRecipeId(Long recipeId);
+    void deleteByRecipeId(Long recipeId);
 }
 
 
