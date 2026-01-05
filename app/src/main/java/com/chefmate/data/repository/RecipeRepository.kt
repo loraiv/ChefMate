@@ -133,12 +133,40 @@ class RecipeRepository(
         }
     }
 
-    suspend fun updateRecipe(id: Long, recipe: RecipeRequest): Result<RecipeResponse> {
+    suspend fun updateRecipe(
+        id: Long, 
+        recipe: RecipeRequest, 
+        imagePaths: List<String>?,
+        existingImageUrls: List<String>
+    ): Result<RecipeResponse> {
         return try {
             val token = getAuthToken()
-            val response = apiService.updateRecipe(token, id, recipe)
 
-            if (response.isSuccessful) {
+            // Prepare image parts if exist
+            val imageParts = imagePaths?.mapNotNull { path ->
+                val file = File(path)
+                if (file.exists()) {
+                    MultipartBody.Part.createFormData(
+                        "images",
+                        file.name,
+                        file.asRequestBody("image/*".toMediaTypeOrNull())
+                    )
+                } else {
+                    null
+                }
+            }?.takeIf { it.isNotEmpty() }
+
+            // Convert recipe to JSON and send as RequestBody with text/plain content type
+            val json = Gson().toJson(recipe)
+            val recipeRequestBody = json.toRequestBody("text/plain".toMediaTypeOrNull())
+
+            // Convert existing image URLs to JSON
+            val existingImageUrlsJson = Gson().toJson(existingImageUrls)
+            val existingImageUrlsRequestBody = existingImageUrlsJson.toRequestBody("text/plain".toMediaTypeOrNull())
+
+            val response = apiService.updateRecipe(token, id, recipeRequestBody, imageParts, existingImageUrlsRequestBody)
+
+            if (response.isSuccessful && response.body() != null) {
                 val updatedRecipe = response.body()!!
                 // Update in current list
                 _recipes.value = _recipes.value.map {
@@ -146,7 +174,8 @@ class RecipeRepository(
                 }
                 Result.success(updatedRecipe)
             } else {
-                Result.failure(Exception("Failed to update recipe"))
+                val errorBody = response.errorBody()?.string() ?: response.message()
+                Result.failure(Exception("Failed to update recipe: ${response.code()} - $errorBody"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -245,11 +274,28 @@ class RecipeRepository(
             val response = apiService.getRecipeComments(token, recipeId)
 
             if (response.isSuccessful) {
-                Result.success(response.body() ?: emptyList())
+                val comments = response.body() ?: emptyList()
+                android.util.Log.d("RecipeRepository", "Received ${comments.size} comments from API")
+                // Log replies for debugging
+                comments.forEach { comment ->
+                    val repliesCount = comment.replies?.size ?: 0
+                    if (repliesCount > 0) {
+                        android.util.Log.d("RecipeRepository", "Comment ${comment.id} has $repliesCount replies: ${comment.replies?.map { it.id }}")
+                    }
+                }
+                // Validate and filter out invalid comments
+                val validComments = comments.filter { comment ->
+                    comment.id > 0 && comment.userId > 0 && comment.userName.isNotBlank()
+                }
+                android.util.Log.d("RecipeRepository", "Valid comments after filtering: ${validComments.size}")
+                Result.success(validComments)
             } else {
-                Result.failure(Exception("Failed to fetch comments"))
+                val errorBody = response.errorBody()?.string()
+                android.util.Log.e("RecipeRepository", "Failed to fetch comments: ${response.code()}, $errorBody")
+                Result.failure(Exception("Failed to fetch comments: ${response.code()}"))
             }
         } catch (e: Exception) {
+            android.util.Log.e("RecipeRepository", "Error fetching comments", e)
             Result.failure(e)
         }
     }
@@ -267,6 +313,77 @@ class RecipeRepository(
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    suspend fun replyToComment(commentId: Long, content: String): Result<Comment> {
+        return try {
+            val token = getAuthToken()
+            val replyBody = mapOf("content" to content)
+            val response = apiService.replyToComment(token, commentId, replyBody)
+
+            if (response.isSuccessful) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Failed to reply to comment"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun likeComment(commentId: Long): Result<Boolean> {
+        return try {
+            val token = getAuthToken()
+            val response = apiService.likeComment(token, commentId)
+
+            if (response.isSuccessful) {
+                Result.success(true)
+            } else {
+                Result.failure(Exception("Failed to like comment"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun unlikeComment(commentId: Long): Result<Boolean> {
+        return try {
+            val token = getAuthToken()
+            val response = apiService.unlikeComment(token, commentId)
+
+            if (response.isSuccessful) {
+                Result.success(true)
+            } else {
+                Result.failure(Exception("Failed to unlike comment"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteComment(commentId: Long): Result<Boolean> {
+        return try {
+            val token = getAuthToken()
+            val response = apiService.deleteComment(token, commentId)
+
+            if (response.isSuccessful) {
+                android.util.Log.d("RecipeRepository", "Comment $commentId deleted successfully")
+                Result.success(true)
+            } else {
+                val errorBody = response.errorBody()?.string()
+                android.util.Log.e("RecipeRepository", "Failed to delete comment: ${response.code()}, $errorBody")
+                val errorMessage = when (response.code()) {
+                    404 -> "Коментарът не е намерен"
+                    403 -> "Нямате право да изтриете този коментар"
+                    401 -> "Не сте авторизирани"
+                    else -> "Грешка при изтриване на коментара: ${response.code()}"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("RecipeRepository", "Error deleting comment", e)
+            Result.failure(Exception("Грешка при изтриване: ${e.message}"))
         }
     }
 }

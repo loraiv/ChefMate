@@ -67,6 +67,46 @@ class AddRecipeViewModel(
     fun clearRecipeCreated() {
         _recipeCreated.value = null
     }
+
+    fun updateRecipe(
+        recipeId: Long,
+        title: String,
+        description: String,
+        difficulty: String,
+        prepTime: Int?,
+        cookTime: Int?,
+        servings: Int?,
+        ingredients: List<String>,
+        steps: List<String>,
+        imagePaths: List<String>?,
+        existingImageUrls: List<String>
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+
+            val recipeRequest = com.chefmate.data.api.models.RecipeRequest(
+                title = title,
+                description = description,
+                difficulty = difficulty,
+                prepTime = prepTime,
+                cookTime = cookTime,
+                servings = servings,
+                ingredients = ingredients,
+                steps = steps
+            )
+
+            recipeRepository.updateRecipe(recipeId, recipeRequest, imagePaths, existingImageUrls)
+                .onSuccess { recipe ->
+                    _recipeCreated.value = recipe
+                }
+                .onFailure { exception ->
+                    _error.value = exception.message ?: "Грешка при обновяване на рецепта"
+                }
+
+            _isLoading.value = false
+        }
+    }
 }
 
 class AddRecipeViewModelFactory(
