@@ -18,6 +18,13 @@ chefmate-backend/chefmate-backend/backend/*.log
 chefmate-backend/chefmate-backend/backend/*.iml
 chefmate-backend/chefmate-backend/backend/*.ipr
 chefmate-backend/chefmate-backend/backend/*.iws
+!chefmate-backend/chefmate-backend/backend/src/
+!chefmate-backend/chefmate-backend/backend/pom.xml
+!chefmate-backend/chefmate-backend/backend/mvnw
+!chefmate-backend/chefmate-backend/backend/mvnw.cmd
+!chefmate-backend/chefmate-backend/backend/.env.example
+!chefmate-backend/chefmate-backend/backend/run-with-env.bat
+!chefmate-backend/chefmate-backend/backend/run-with-env.sh
 
 # IDE
 .idea/
