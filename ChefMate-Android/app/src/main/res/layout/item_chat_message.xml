@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <!-- User message (right aligned) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/userMessageCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginStart="64dp"
+        android:layout_marginEnd="0dp"
+        android:maxWidth="280dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="?attr/colorPrimary"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="2dp">
+
+        <TextView
+            android:id="@+id/userMessageText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:textColor="?attr/colorOnPrimary"
+            android:textSize="16sp"
+            tools:text="How do I make pasta?" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- AI message (left aligned) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/aiMessageCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:layout_marginStart="0dp"
+        android:layout_marginEnd="64dp"
+        android:maxWidth="280dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="?attr/colorSurface"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="2dp">
+
+        <TextView
+            android:id="@+id/aiMessageText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp"
+            tools:text="To make pasta, first boil water..." />
+
+    </com.google.android.material.card.MaterialCardView>
+
+</FrameLayout>
+

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.ChefMate" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color - Warm brown tones for dark theme -->
+        <item name="colorPrimary">#B8956A</item>
+        <item name="colorPrimaryVariant">#8B6F47</item>
+        <item name="colorOnPrimary">#1A1612</item>
+        <!-- Secondary brand color - Warm beige tones -->
+        <item name="colorSecondary">#D4C4A8</item>
+        <item name="colorSecondaryVariant">#B8A082</item>
+        <item name="colorOnSecondary">#1A1612</item>
+        
+        <!-- Background colors for dark theme - Warm earthy tones matching light theme -->
+        <item name="android:colorBackground">#1A1612</item>
+        <item name="colorSurface">#2A241F</item>
+        <item name="colorOnSurface">#F5E6D3</item>
+        <item name="colorOnBackground">#F5E6D3</item>
+        <item name="colorOnSurfaceVariant">#D4C4A8</item>
+        
+        <!-- Material Design 3 rounded corners -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.ChefMate.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.ChefMate.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.ChefMate.LargeComponent</item>
+        
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        
+        <!-- Error color -->
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/white</item>
+        
+        <!-- Apply global button styles -->
+        <item name="materialButtonStyle">@style/Widget.ChefMate.Button</item>
+        
+        <!-- Apply global TextInputLayout styles -->
+        <item name="textInputStyle">@style/Widget.ChefMate.TextInputLayout.OutlinedBox</item>
+    </style>
+    
+    <!-- Rounded corner styles for modern look -->
+    <style name="ShapeAppearance.ChefMate.SmallComponent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+    
+    <style name="ShapeAppearance.ChefMate.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+    
+    <style name="ShapeAppearance.ChefMate.LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">24dp</item>
+    </style>
+    
+    <!-- Global button styles with consistent corner radius -->
+    <style name="Widget.ChefMate.Button" parent="Widget.MaterialComponents.Button">
+        <item name="cornerRadius">16dp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+    
+    <style name="Widget.ChefMate.Button.OutlinedButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="cornerRadius">16dp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+    
+    <style name="Widget.ChefMate.Button.TextButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="cornerRadius">16dp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+    
+    <!-- Global TextInputLayout style with consistent corner radius -->
+    <style name="Widget.ChefMate.TextInputLayout.OutlinedBox" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+    </style>
+    
+    <style name="Widget.ChefMate.TextInputLayout.FilledBox" parent="Widget.MaterialComponents.TextInputLayout.FilledBox">
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+    </style>
+</resources>

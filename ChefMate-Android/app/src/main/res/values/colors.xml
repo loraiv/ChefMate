@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#7A9B7A</color>
+    <color name="primary_light">#9BB89B</color>
+    <color name="primary_dark">#5F7A5F</color>
+    
+    <color name="secondary">#D4C4A8</color>
+    <color name="secondary_light">#E8DDCC</color>
+    <color name="secondary_dark">#B8A082</color>
+    
+    <color name="accent">#6B9B8A</color>
+    <color name="accent_light">#8BB5A5</color>
+    <color name="accent_dark">#557A6B</color>
+    
+    <color name="dark_green">#5A7A5A</color>
+    <color name="dark_green_medium">#6B8B6B</color>
+    <color name="dark_green_light">#7A9B7A</color>
+    <color name="dark_green_accent">#658B65</color>
+    
+    <color name="cream">#FAF8F5</color>
+    <color name="cream_medium">#F5F0E8</color>
+    <color name="cream_dark">#EBE5D8</color>
+    <color name="warm_white">#FFFEFB</color>
+    <color name="cream_accent">#F0EBE0</color>
+    
+    <color name="ocean_blue">#6B8B9B</color>
+    <color name="ocean_blue_medium">#7A9BAB</color>
+    <color name="ocean_blue_light">#8BABBB</color>
+    <color name="ocean_blue_dark">#5A7A8B</color>
+    
+    <color name="golden">#C9A882</color>
+    <color name="golden_medium">#B8956A</color>
+    <color name="golden_light">#D4B89B</color>
+    <color name="copper">#A8826B</color>
+    
+    <color name="background">#FAF8F5</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F5F2EB</color>
+    <color name="surface_light">#FFFEFB</color>
+    
+    <color name="text_primary">#3E3E3E</color>
+    <color name="text_secondary">#6B6B6B</color>
+    <color name="text_hint">#9B9B9B</color>
+    <color name="text_on_primary">#FFFFFF</color>
+    <color name="text_on_secondary">#3E3E3E</color>
+    <color name="text_on_accent">#FFFFFF</color>
+    
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <color name="error">#C85A5A</color>
+    <color name="error_light">#E07A7A</color>
+    <color name="success">#6B9B6B</color>
+    <color name="success_light">#7AAB7A</color>
+    
+    <color name="divider">#E0D8D0</color>
+    <color name="border">#D0C8C0</color>
+    
+    <color name="purple_200">#D4C4A8</color>
+    <color name="purple_500">#7A9B7A</color>
+    <color name="purple_700">#5F7A5F</color>
+    <color name="teal_200">#D4C4A8</color>
+    <color name="teal_700">#6B9B8A</color>
+    
+    <color name="password_weak">#C85A5A</color>
+    <color name="password_medium">#C9A882</color>
+    <color name="password_strong">#6B9B6B</color>
+    <color name="password_very_strong">#5A7A5A</color>
+</resources>

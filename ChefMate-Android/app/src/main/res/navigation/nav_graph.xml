@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/recipeListFragment">
+
+    <!-- Recipe List Fragment -->
+    <fragment
+        android:id="@+id/recipeListFragment"
+        android:name="com.chefmate.ui.recipes.RecipeListFragment"
+        android:label="Recipes"
+        tools:layout="@layout/fragment_recipe_list">
+
+        <action
+            android:id="@+id/action_recipeListFragment_to_recipeDetailFragment"
+            app:destination="@id/recipeDetailFragment" />
+
+        <action
+            android:id="@+id/action_recipeListFragment_to_addRecipeFragment"
+            app:destination="@id/addRecipeFragment" />
+    </fragment>
+
+    <!-- Recipe Detail Fragment -->
+    <fragment
+        android:id="@+id/recipeDetailFragment"
+        android:name="com.chefmate.ui.recipes.RecipeDetailFragment"
+        android:label="Recipe Details"
+        tools:layout="@layout/fragment_recipe_detail">
+
+        <argument
+            android:name="recipeId"
+            app:argType="long" />
+
+        <action
+            android:id="@+id/action_recipeDetailFragment_to_recipeListFragment"
+            app:destination="@id/recipeListFragment"
+            app:popUpTo="@id/recipeListFragment"
+            app:popUpToInclusive="false" />
+        
+        <action
+            android:id="@+id/action_recipeDetailFragment_to_likedRecipesFragment"
+            app:destination="@id/likedRecipesFragment"
+            app:popUpTo="@id/likedRecipesFragment"
+            app:popUpToInclusive="false" />
+        
+        <action
+            android:id="@+id/action_recipeDetailFragment_to_userRecipesFragment"
+            app:destination="@id/userRecipesFragment" />
+        
+        <action
+            android:id="@+id/action_recipeDetailFragment_to_addRecipeFragment"
+            app:destination="@id/addRecipeFragment" />
+        
+        <action
+            android:id="@+id/action_recipeDetailFragment_to_cookingModeFragment"
+            app:destination="@id/cookingModeFragment" />
+    </fragment>
+
+    <!-- Add Recipe Fragment -->
+    <fragment
+        android:id="@+id/addRecipeFragment"
+        android:name="com.chefmate.ui.recipes.AddRecipeFragment"
+        android:label="Add Recipe"
+        tools:layout="@layout/fragment_add_recipe">
+
+        <argument
+            android:name="recipeId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+
+        <action
+            android:id="@+id/action_addRecipeFragment_to_recipeListFragment"
+            app:destination="@id/recipeListFragment"
+            app:popUpTo="@id/recipeListFragment"
+            app:popUpToInclusive="false" />
+    </fragment>
+
+    <!-- Liked Recipes Fragment -->
+    <fragment
+        android:id="@+id/likedRecipesFragment"
+        android:name="com.chefmate.ui.recipes.LikedRecipesFragment"
+        android:label="Liked Recipes"
+        tools:layout="@layout/fragment_recipe_list">
+
+        <action
+            android:id="@+id/action_likedRecipesFragment_to_recipeDetailFragment"
+            app:destination="@id/recipeDetailFragment" />
+    </fragment>
+
+    <!-- User Recipes Fragment -->
+    <fragment
+        android:id="@+id/userRecipesFragment"
+        android:name="com.chefmate.ui.recipes.UserRecipesFragment"
+        android:label="User Recipes"
+        tools:layout="@layout/fragment_recipe_list">
+
+        <argument
+            android:name="userId"
+            app:argType="long" />
+
+        <argument
+            android:name="username"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/action_userRecipesFragment_to_recipeDetailFragment"
+            app:destination="@id/recipeDetailFragment" />
+    </fragment>
+
+    <!-- Shopping List Fragment -->
+    <fragment
+        android:id="@+id/shoppingListFragment"
+        android:name="com.chefmate.ui.shopping.ShoppingListFragment"
+        android:label="Shopping List"
+        tools:layout="@layout/fragment_shopping_list">
+
+        <action
+            android:id="@+id/action_shoppingList_to_recipeList"
+            app:destination="@id/recipeListFragment" />
+    </fragment>
+
+    <!-- AI Assistant Fragment -->
+    <fragment
+        android:id="@+id/cookingAssistantFragment"
+        android:name="com.chefmate.ui.ai.CookingAssistantFragment"
+        android:label="AI Assistant"
+        tools:layout="@layout/fragment_cooking_assistant">
+
+        <action
+            android:id="@+id/action_cookingAssistant_to_recipeList"
+            app:destination="@id/recipeListFragment" />
+    </fragment>
+
+    <!-- Cooking Mode Fragment -->
+    <fragment
+        android:id="@+id/cookingModeFragment"
+        android:name="com.chefmate.ui.cooking.CookingModeFragment"
+        android:label="Cooking Mode"
+        tools:layout="@layout/fragment_cooking_mode">
+
+        <argument
+            android:name="recipeId"
+            app:argType="long" />
+
+    </fragment>
+
+</navigation>
+
