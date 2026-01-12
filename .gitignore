@@ -1,0 +1,47 @@
+# Android
+ChefMate-Android/.gradle/
+ChefMate-Android/.idea/
+ChefMate-Android/build/
+ChefMate-Android/app/build/
+ChefMate-Android/local.properties
+ChefMate-Android/*.iml
+ChefMate-Android/.DS_Store
+ChefMate-Android/captures/
+
+# Backend
+chefmate-backend/chefmate-backend/backend/target/
+chefmate-backend/chefmate-backend/backend/.env
+chefmate-backend/chefmate-backend/backend/.env.local
+chefmate-backend/chefmate-backend/backend/logs/
+chefmate-backend/chefmate-backend/backend/uploads/
+chefmate-backend/chefmate-backend/backend/*.log
+chefmate-backend/chefmate-backend/backend/*.iml
+chefmate-backend/chefmate-backend/backend/*.ipr
+chefmate-backend/chefmate-backend/backend/*.iws
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+
+# Environment
+.env
+.env.local
