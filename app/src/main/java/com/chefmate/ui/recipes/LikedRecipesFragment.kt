@@ -95,10 +95,6 @@ class LikedRecipesFragment : Fragment() {
                 navigateToProfile()
                 true
             }
-            R.id.menu_logout -> {
-                logout()
-                true
-            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -106,20 +102,6 @@ class LikedRecipesFragment : Fragment() {
     private fun navigateToProfile() {
         val intent = Intent(requireContext(), ProfileActivity::class.java)
         startActivity(intent)
-    }
-
-    private fun logout() {
-        val tokenManager = TokenManager(requireContext())
-        tokenManager.clearToken()
-        tokenManager.clearUserInfo()
-        tokenManager.clearRememberMeCredentials()
-        
-        Toast.makeText(requireContext(), "Излязохте успешно", Toast.LENGTH_SHORT).show()
-        
-        val intent = Intent(requireContext(), LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        requireActivity().finish()
     }
 
     private fun hideSearchAndFilters() {

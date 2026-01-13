@@ -8,32 +8,42 @@ import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.chefmate.R
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
-class RecipeImageAdapter(private val imageUrls: List<String>) : RecyclerView.Adapter<RecipeImageAdapter.ImageViewHolder>() {
+class RecipeImageAdapter(
+    private val imageUrls: List<String>,
+    private val isEditMode: Boolean = false,
+    private val onDeleteClick: ((Int) -> Unit)? = null
+) : RecyclerView.Adapter<RecipeImageAdapter.ImageViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_recipe_image, parent, false)
-        return ImageViewHolder(view)
+        return ImageViewHolder(view, isEditMode, onDeleteClick)
     }
 
     override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
-        holder.bind(imageUrls[position])
+        holder.bind(imageUrls[position], position)
     }
 
     override fun getItemCount(): Int = imageUrls.size
 
-    class ImageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class ImageViewHolder(
+        itemView: View,
+        private val isEditMode: Boolean,
+        private val onDeleteClick: ((Int) -> Unit)?
+    ) : RecyclerView.ViewHolder(itemView) {
         private val imageView: ImageView = itemView.findViewById(R.id.recipeImage)
+        private val deleteButton: FloatingActionButton = itemView.findViewById(R.id.deleteImageButton)
 
-        fun bind(imageUrl: String) {
+        fun bind(imageUrl: String, position: Int) {
             // Check if it's a URI string (starts with content:// or file://)
             if (imageUrl.startsWith("content://") || imageUrl.startsWith("file://")) {
                 Glide.with(itemView.context)
                     .load(Uri.parse(imageUrl))
                     .placeholder(android.R.drawable.ic_menu_gallery)
                     .error(android.R.drawable.ic_menu_gallery)
-                    .centerCrop()
+                    .fitCenter()
                     .into(imageView)
             } else {
                 // It's a URL
@@ -49,8 +59,18 @@ class RecipeImageAdapter(private val imageUrls: List<String>) : RecyclerView.Ada
                     .load(fullUrl)
                     .placeholder(android.R.drawable.ic_menu_gallery)
                     .error(android.R.drawable.ic_menu_gallery)
-                    .centerCrop()
+                    .fitCenter()
                     .into(imageView)
+            }
+
+            // Show delete button only in edit mode
+            if (isEditMode && onDeleteClick != null) {
+                deleteButton.visibility = View.VISIBLE
+                deleteButton.setOnClickListener {
+                    onDeleteClick?.invoke(position)
+                }
+            } else {
+                deleteButton.visibility = View.GONE
             }
         }
     }

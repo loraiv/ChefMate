@@ -13,12 +13,6 @@
         android:title="Профил"
         android:icon="@android:drawable/ic_menu_myplaces"
         app:showAsAction="ifRoom" />
-    
-    <item
-        android:id="@+id/menu_logout"
-        android:title="Изход"
-        android:icon="@android:drawable/ic_menu_close_clear_cancel"
-        app:showAsAction="ifRoom" />
         
 </menu>
 

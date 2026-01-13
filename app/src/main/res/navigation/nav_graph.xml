@@ -47,6 +47,10 @@
         <action
             android:id="@+id/action_recipeDetailFragment_to_userRecipesFragment"
             app:destination="@id/userRecipesFragment" />
+        
+        <action
+            android:id="@+id/action_recipeDetailFragment_to_addRecipeFragment"
+            app:destination="@id/addRecipeFragment" />
     </fragment>
 
     <!-- Add Recipe Fragment -->
@@ -55,6 +59,11 @@
         android:name="com.chefmate.ui.recipes.AddRecipeFragment"
         android:label="Добави рецепта"
         tools:layout="@layout/fragment_add_recipe">
+
+        <argument
+            android:name="recipeId"
+            app:argType="long"
+            android:defaultValue="-1L" />
 
         <action
             android:id="@+id/action_addRecipeFragment_to_recipeListFragment"

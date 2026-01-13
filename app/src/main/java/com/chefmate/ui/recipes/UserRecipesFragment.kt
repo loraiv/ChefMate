@@ -27,18 +27,7 @@ class UserRecipesFragment : Fragment() {
     private var _binding: FragmentRecipeListBinding? = null
     private val binding get() = _binding!!
 
-    private val viewModel: UserRecipesViewModel by viewModels {
-        val tokenManager = TokenManager(requireContext())
-        val apiService = AppModule.provideApiService()
-        val recipeRepository = RecipeRepository(apiService, tokenManager)
-        val userId = arguments?.getLong("userId") ?: -1L
-        val username = arguments?.getString("username") ?: ""
-        if (userId == -1L) {
-            throw IllegalStateException("userId is required for UserRecipesFragment")
-        }
-        UserRecipesViewModelFactory(recipeRepository, userId, username)
-    }
-
+    private lateinit var viewModel: UserRecipesViewModel
     private lateinit var adapter: RecipeAdapter
 
     override fun onCreateView(
@@ -59,13 +48,22 @@ class UserRecipesFragment : Fragment() {
             return
         }
 
-        // Validate arguments
+        // Validate arguments first
         val userId = arguments?.getLong("userId") ?: -1L
-        if (userId == -1L) {
+        val username = arguments?.getString("username") ?: ""
+        
+        if (userId <= 0) {
             android.util.Log.e("UserRecipesFragment", "Invalid userId: $userId")
+            Toast.makeText(requireContext(), "Невалиден потребител", Toast.LENGTH_SHORT).show()
             findNavController().popBackStack()
             return
         }
+
+        // Create ViewModel only after arguments are validated
+        val apiService = AppModule.provideApiService()
+        val recipeRepository = RecipeRepository(apiService, tokenManager)
+        val viewModelFactory = UserRecipesViewModelFactory(recipeRepository, userId, username)
+        viewModel = androidx.lifecycle.ViewModelProvider(this, viewModelFactory)[UserRecipesViewModel::class.java]
 
         setupToolbar()
         setupRecyclerView()
@@ -76,6 +74,16 @@ class UserRecipesFragment : Fragment() {
     }
 
     private fun setupToolbar() {
+        val toolbar = binding.toolbar
+        (requireActivity() as? androidx.appcompat.app.AppCompatActivity)?.let { activity ->
+            activity.setSupportActionBar(toolbar)
+            activity.supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            activity.supportActionBar?.setDisplayShowHomeEnabled(true)
+        }
+        toolbar.setNavigationOnClickListener {
+            findNavController().navigateUp()
+        }
+        
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbarTitle)
         if (toolbarTitle != null) {
             toolbarTitle.text = viewModel.username.ifEmpty { "Рецепти" }

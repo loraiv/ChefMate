@@ -55,11 +55,14 @@ interface ApiService {
         @Part images: List<MultipartBody.Part>?
     ): Response<RecipeResponse>
 
+    @Multipart
     @PUT("api/recipes/{id}")
     suspend fun updateRecipe(
         @Header("Authorization") token: String,
         @Path("id") id: Long,
-        @Body recipe: RecipeRequest
+        @Part("recipe") recipe: RequestBody,
+        @Part images: List<MultipartBody.Part>?,
+        @Part("existingImageUrls") existingImageUrls: RequestBody?
     ): Response<RecipeResponse>
 
     @DELETE("api/recipes/{id}")
@@ -132,4 +135,29 @@ interface ApiService {
         @Path("recipeId") recipeId: Long,
         @Body comment: Map<String, String>
     ): Response<Comment>
+
+    @POST("api/recipes/comments/{commentId}/reply")
+    suspend fun replyToComment(
+        @Header("Authorization") token: String,
+        @Path("commentId") commentId: Long,
+        @Body reply: Map<String, String>
+    ): Response<Comment>
+
+    @POST("api/recipes/comments/{commentId}/like")
+    suspend fun likeComment(
+        @Header("Authorization") token: String,
+        @Path("commentId") commentId: Long
+    ): Response<Unit>
+
+    @DELETE("api/recipes/comments/{commentId}/like")
+    suspend fun unlikeComment(
+        @Header("Authorization") token: String,
+        @Path("commentId") commentId: Long
+    ): Response<Unit>
+
+    @DELETE("api/recipes/comments/{commentId}")
+    suspend fun deleteComment(
+        @Header("Authorization") token: String,
+        @Path("commentId") commentId: Long
+    ): Response<Unit>
 }

@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.widget.ViewPager2
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -32,6 +33,7 @@ import com.chefmate.di.AppModule
 import com.chefmate.ui.recipes.adapter.IngredientAdapter
 import com.chefmate.ui.recipes.adapter.RecipeImageAdapter
 import com.chefmate.ui.recipes.adapter.StepAdapter
+import com.chefmate.data.api.models.RecipeResponse
 import com.chefmate.ui.recipes.viewmodel.AddRecipeViewModel
 import com.chefmate.ui.recipes.viewmodel.AddRecipeViewModelFactory
 import com.chefmate.utils.TokenManager
@@ -53,7 +55,13 @@ class AddRecipeFragment : Fragment() {
         val recipeRepository = RecipeRepository(apiService, tokenManager)
         AddRecipeViewModelFactory(recipeRepository)
     }
-
+    
+    private val recipeRepository: RecipeRepository by lazy {
+        val tokenManager = TokenManager(requireContext())
+        val apiService = AppModule.provideApiService()
+        RecipeRepository(apiService, tokenManager)
+    }
+    
     private val selectedImagePaths = mutableListOf<String>()
     private val selectedImageUris = mutableListOf<Uri>()
     private var currentCameraImageUri: Uri? = null
@@ -61,6 +69,9 @@ class AddRecipeFragment : Fragment() {
     private val steps = mutableListOf<String>()
     private lateinit var ingredientAdapter: IngredientAdapter
     private lateinit var stepAdapter: StepAdapter
+    private var isEditMode = false
+    private var recipeId: Long = -1
+    private val existingImageUrls = mutableListOf<String>()
 
     private val imagePickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -140,12 +151,33 @@ class AddRecipeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        recipeId = arguments?.getLong("recipeId", -1) ?: -1
+        isEditMode = recipeId != -1L
+
+        setupToolbar()
         setupRecyclerViews()
         setupDifficultySpinner()
         setupImagePicker()
         setupAddButtons()
         setupSaveButton()
         setupObservers()
+        
+        if (isEditMode) {
+            loadRecipeForEdit(recipeId)
+        }
+    }
+
+    private fun setupToolbar() {
+        val toolbar = binding.toolbar
+        (requireActivity() as? androidx.appcompat.app.AppCompatActivity)?.let { activity ->
+            activity.setSupportActionBar(toolbar)
+            activity.supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            activity.supportActionBar?.setDisplayShowHomeEnabled(true)
+            activity.supportActionBar?.title = if (isEditMode) "Редактирай рецепта" else "Добави рецепта"
+        }
+        toolbar.setNavigationOnClickListener {
+            findNavController().navigateUp()
+        }
     }
 
     private fun setupRecyclerViews() {
@@ -188,30 +220,82 @@ class AddRecipeFragment : Fragment() {
 
     private fun setupImagePicker() {
         binding.selectImageButton.setOnClickListener {
-            if (selectedImageUris.size >= 5) {
+            val totalImages = selectedImageUris.size + existingImageUrls.size
+            if (totalImages >= 5) {
                 Toast.makeText(requireContext(), "Можете да добавите максимум 5 снимки", Toast.LENGTH_SHORT).show()
             } else {
                 showImageSourceDialog()
             }
         }
         
-        // Setup ViewPager2 for images
-        val adapter = RecipeImageAdapter(selectedImageUris.map { it.toString() })
-        binding.recipeImagesViewPager.adapter = adapter
+        if (!isEditMode) {
+            val adapter = RecipeImageAdapter(
+                imageUrls = selectedImageUris.map { it.toString() },
+                isEditMode = false,
+                onDeleteClick = { position ->
+                    handleImageDelete(position)
+                }
+            )
+            binding.recipeImagesViewPager.adapter = adapter
+        }
     }
     
     private fun updateImagePreview() {
-        val adapter = RecipeImageAdapter(selectedImageUris.map { it.toString() })
+        val allImageUrls = if (isEditMode) {
+            existingImageUrls + selectedImageUris.map { it.toString() }
+        } else {
+            selectedImageUris.map { it.toString() }
+        }
+        
+        val adapter = RecipeImageAdapter(
+            imageUrls = allImageUrls,
+            isEditMode = isEditMode,
+            onDeleteClick = { position ->
+                handleImageDelete(position)
+            }
+        )
         binding.recipeImagesViewPager.adapter = adapter
         
-        if (selectedImageUris.size > 1) {
+        if (allImageUrls.size > 1) {
             binding.imageIndicatorLayout.visibility = View.VISIBLE
-            setupImageIndicators(selectedImageUris.size)
+            setupImageIndicators(allImageUrls.size)
         } else {
             binding.imageIndicatorLayout.visibility = View.GONE
         }
         
-        binding.selectImageButton.text = "Добави снимка (${selectedImageUris.size}/5)"
+        binding.selectImageButton.text = "Добави снимка (${allImageUrls.size}/5)"
+    }
+    
+    private fun handleImageDelete(position: Int) {
+        val allImageUrls = if (isEditMode) {
+            existingImageUrls + selectedImageUris.map { it.toString() }
+        } else {
+            selectedImageUris.map { it.toString() }
+        }
+        
+        if (position < 0 || position >= allImageUrls.size) return
+        
+        val imageUrl = allImageUrls[position]
+        
+        val isExistingImage = isEditMode && 
+            !imageUrl.startsWith("content://") && 
+            !imageUrl.startsWith("file://") &&
+            existingImageUrls.contains(imageUrl)
+        
+        if (isExistingImage) {
+            existingImageUrls.remove(imageUrl)
+        } else {
+            val uriString = imageUrl
+            val indexToRemove = selectedImageUris.indexOfFirst { it.toString() == uriString }
+            if (indexToRemove >= 0) {
+                selectedImageUris.removeAt(indexToRemove)
+                if (indexToRemove < selectedImagePaths.size) {
+                    selectedImagePaths.removeAt(indexToRemove)
+                }
+            }
+        }
+        
+        updateImagePreview()
     }
     
     private fun setupImageIndicators(count: Int) {
@@ -266,7 +350,6 @@ class AddRecipeFragment : Fragment() {
     }
 
     private fun openCamera() {
-        // Check camera permission
         when {
             ContextCompat.checkSelfPermission(
                 requireContext(),
@@ -275,7 +358,6 @@ class AddRecipeFragment : Fragment() {
                 openCameraInternal()
             }
             else -> {
-                // Request camera permission
                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
             }
         }
@@ -283,7 +365,6 @@ class AddRecipeFragment : Fragment() {
 
     private fun openCameraInternal() {
         try {
-            // Create unique file each time with timestamp
             val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
             val imageFileName = "JPEG_recipe_${timeStamp}_"
             val storageDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
@@ -303,11 +384,9 @@ class AddRecipeFragment : Fragment() {
 
     private fun startCrop(sourceUri: Uri) {
         try {
-            // Use external files directory for both source and destination
             val externalDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
             externalDir?.mkdirs()
             
-            // Copy source image to external directory
             val tempSourceFile = File(externalDir, "temp_source_${System.currentTimeMillis()}.jpg")
             
             requireContext().contentResolver.openInputStream(sourceUri)?.use { input ->
@@ -325,7 +404,6 @@ class AddRecipeFragment : Fragment() {
                 tempSourceFile
             )
             
-            // Destination file in external directory
             val destinationFile = File(externalDir, "cropped_recipe_${System.currentTimeMillis()}.jpg")
             
             val destinationUri = FileProvider.getUriForFile(
@@ -335,12 +413,23 @@ class AddRecipeFragment : Fragment() {
             )
             
             val uCrop = UCrop.of(tempSourceUri, destinationUri)
-                .withAspectRatio(16f, 9f) // Wide aspect ratio for recipe images
                 .withMaxResultSize(2000, 2000)
             
             val intent = uCrop.getIntent(requireContext())
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            
+            val aspectRatioList = arrayListOf(
+                com.yalantis.ucrop.model.AspectRatio("1:1", 1f, 1f),
+                com.yalantis.ucrop.model.AspectRatio("Оригинална", 0f, 0f)
+            )
+            try {
+                intent.putParcelableArrayListExtra("com.yalantis.ucrop.AspectRatioOptions", aspectRatioList)
+                intent.putExtra("com.yalantis.ucrop.AspectRatioSelectedByDefault", 0)
+            } catch (e: Exception) {
+                android.util.Log.w("AddRecipeFragment", "Could not set custom aspect ratios: ${e.message}")
+            }
+            
             cropLauncher.launch(intent)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -398,6 +487,9 @@ class AddRecipeFragment : Fragment() {
     }
 
     private fun setupSaveButton() {
+        if (isEditMode) {
+            binding.saveRecipeButton.text = "Запази промените"
+        }
         binding.saveRecipeButton.setOnClickListener {
             if (validateForm()) {
                 saveRecipe()
@@ -442,7 +534,6 @@ class AddRecipeFragment : Fragment() {
         val title = binding.titleEditText.text?.toString()?.trim() ?: ""
         val description = binding.descriptionEditText.text?.toString()?.trim() ?: ""
         val difficultyText = binding.difficultySpinner.text?.toString() ?: "ЛЕСНО"
-        // Convert Bulgarian difficulty to English for backend
         val difficulty = when (difficultyText) {
             "ЛЕСНО" -> "EASY"
             "СРЕДНО" -> "MEDIUM"
@@ -452,24 +543,94 @@ class AddRecipeFragment : Fragment() {
         val prepTime = binding.prepTimeEditText.text?.toString()?.toIntOrNull()
         val cookTime = null
 
-        viewModel.createRecipe(
-            title = title,
-            description = description,
-            difficulty = difficulty,
-            prepTime = prepTime,
-            cookTime = cookTime,
-            servings = null,
-            ingredients = ingredients,
-            steps = steps,
-            imagePaths = selectedImagePaths.takeIf { it.isNotEmpty() }
-        )
+        if (isEditMode) {
+            viewModel.updateRecipe(
+                recipeId = recipeId,
+                title = title,
+                description = description,
+                difficulty = difficulty,
+                prepTime = prepTime,
+                cookTime = cookTime,
+                servings = null,
+                ingredients = ingredients,
+                steps = steps,
+                imagePaths = selectedImagePaths.takeIf { it.isNotEmpty() },
+                existingImageUrls = existingImageUrls
+            )
+        } else {
+            viewModel.createRecipe(
+                title = title,
+                description = description,
+                difficulty = difficulty,
+                prepTime = prepTime,
+                cookTime = cookTime,
+                servings = null,
+                ingredients = ingredients,
+                steps = steps,
+                imagePaths = selectedImagePaths.takeIf { it.isNotEmpty() }
+            )
+        }
+    }
+    
+    private fun loadRecipeForEdit(recipeId: Long) {
+        lifecycleScope.launch {
+            recipeRepository.getRecipeById(recipeId)
+                .onSuccess { recipe ->
+                    binding.titleEditText.setText(recipe.title)
+                    binding.descriptionEditText.setText(recipe.description)
+                    
+                    val difficultyText = when {
+                        recipe.difficulty.equals("EASY", ignoreCase = true) || 
+                        recipe.difficulty.equals("ЛЕСНО", ignoreCase = true) -> "ЛЕСНО"
+                        recipe.difficulty.equals("MEDIUM", ignoreCase = true) || 
+                        recipe.difficulty.equals("СРЕДНО", ignoreCase = true) -> "СРЕДНО"
+                        recipe.difficulty.equals("HARD", ignoreCase = true) || 
+                        recipe.difficulty.equals("ТРУДНО", ignoreCase = true) -> "ТРУДНО"
+                        else -> "ЛЕСНО"
+                    }
+                    binding.difficultySpinner.setText(difficultyText)
+                    
+                    recipe.prepTime?.let { binding.prepTimeEditText.setText(it.toString()) }
+                    
+                    ingredients.clear()
+                    ingredients.addAll(recipe.ingredients)
+                    ingredientAdapter.notifyDataSetChanged()
+                    
+                    steps.clear()
+                    steps.addAll(recipe.steps)
+                    stepAdapter.notifyDataSetChanged()
+                    
+                    existingImageUrls.clear()
+                    val imageUrls: List<String> = recipe.imageUrls ?: (recipe.imageUrl?.let { listOf(it) } ?: emptyList<String>())
+                    existingImageUrls.addAll(imageUrls)
+                    
+                    if (imageUrls.isNotEmpty()) {
+                        updateImagePreviewForEdit(imageUrls)
+                    }
+                }
+                .onFailure { exception ->
+                    Toast.makeText(requireContext(), "Грешка при зареждане на рецепта: ${exception.message}", Toast.LENGTH_LONG).show()
+                }
+        }
+    }
+    
+    private fun updateImagePreviewForEdit(imageUrls: List<String>) {
+        existingImageUrls.clear()
+        existingImageUrls.addAll(imageUrls)
+        
+        updateImagePreview()
     }
 
     private fun setupObservers() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.isLoading.collect { isLoading ->
                 binding.saveRecipeButton.isEnabled = !isLoading
-                binding.saveRecipeButton.text = if (isLoading) "Запазване..." else "Запази рецепта"
+                val buttonText = if (isEditMode) {
+                    if (isLoading) "Запазване..." else "Запази промените"
+                } else {
+                    if (isLoading) "Запазване..." else "Запази рецепта"
+                }
+                binding.saveRecipeButton.text = buttonText
             }
         }
 
@@ -485,7 +646,8 @@ class AddRecipeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.recipeCreated.collect { recipe ->
                 recipe?.let {
-                    Toast.makeText(requireContext(), "Рецептата е създадена успешно!", Toast.LENGTH_SHORT).show()
+                    val message = if (isEditMode) "Рецептата е обновена успешно!" else "Рецептата е създадена успешно!"
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                         requireActivity().onBackPressedDispatcher.onBackPressed()
                     } else {
