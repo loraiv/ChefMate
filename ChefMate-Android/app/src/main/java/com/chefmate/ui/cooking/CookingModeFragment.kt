@@ -3,9 +3,6 @@ package com.chefmate.ui.cooking
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.chefmate.R
 import com.chefmate.data.api.models.RecipeResponse
 import com.chefmate.databinding.FragmentCookingModeBinding
+import com.chefmate.utils.MlKitSpeechRecognizer
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -32,8 +30,7 @@ class CookingModeFragment : Fragment() {
         CookingModeViewModelFactory(requireContext())
     }
 
-    private var speechRecognizer: SpeechRecognizer? = null
-    private var isListening = false
+    private var mlKitSpeechRecognizer: MlKitSpeechRecognizer? = null
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -91,61 +88,36 @@ class CookingModeFragment : Fragment() {
     }
 
     private fun setupSpeechRecognizer() {
-        if (SpeechRecognizer.isRecognitionAvailable(requireContext())) {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext())
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {
-                    isListening = true
-                    binding.microphoneButton.setIconResource(R.drawable.ic_pause)
-                }
-
-                override fun onBeginningOfSpeech() {}
-
-                override fun onRmsChanged(rmsdB: Float) {}
-
-                override fun onBufferReceived(buffer: ByteArray?) {}
-
-                override fun onEndOfSpeech() {
-                    isListening = false
-                    binding.microphoneButton.setIconResource(R.drawable.ic_mic)
-                }
-
-                override fun onError(error: Int) {
-                    isListening = false
-                    binding.microphoneButton.setIconResource(R.drawable.ic_mic)
-                    when (error) {
-                        SpeechRecognizer.ERROR_AUDIO -> Toast.makeText(requireContext(), "Audio error", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_CLIENT -> {}
-                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> Toast.makeText(requireContext(), "No microphone permission", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_NETWORK -> Toast.makeText(requireContext(), "Network error", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> Toast.makeText(requireContext(), "Network timeout", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_NO_MATCH -> Toast.makeText(requireContext(), "Speech not recognized", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> Toast.makeText(requireContext(), "Recognizer busy", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_SERVER -> Toast.makeText(requireContext(), "Server error", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> Toast.makeText(requireContext(), "No speech detected", Toast.LENGTH_SHORT).show()
-                    }
-                }
-
-                override fun onResults(results: Bundle?) {
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) {
-                        val spokenText = matches[0]
-                        viewModel.sendVoiceMessage(spokenText)
-                    }
-                    isListening = false
-                    binding.microphoneButton.setIconResource(R.drawable.ic_mic)
-                }
-
-                override fun onPartialResults(partialResults: Bundle?) {}
-
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
+        mlKitSpeechRecognizer = MlKitSpeechRecognizer(requireContext())
+        
+        if (!mlKitSpeechRecognizer?.isAvailable()!!) {
+            Toast.makeText(requireContext(), "Speech recognition is not available on this device", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // Setup callbacks
+        mlKitSpeechRecognizer?.onResult = { recognizedText ->
+            viewModel.sendVoiceMessage(recognizedText)
+            binding.microphoneButton.setIconResource(R.drawable.ic_mic)
+        }
+        
+        mlKitSpeechRecognizer?.onError = { errorMessage ->
+            Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_SHORT).show()
+            binding.microphoneButton.setIconResource(R.drawable.ic_mic)
+        }
+        
+        mlKitSpeechRecognizer?.onListeningStateChanged = { isListening ->
+            if (isListening) {
+                binding.microphoneButton.setIconResource(R.drawable.ic_pause)
+            } else {
+                binding.microphoneButton.setIconResource(R.drawable.ic_mic)
+            }
         }
     }
 
     private fun setupClickListeners() {
         binding.microphoneButton.setOnClickListener {
-            if (isListening) {
+            if (mlKitSpeechRecognizer?.isCurrentlyListening() == true) {
                 stopVoiceRecognition()
             } else {
                 checkPermissionAndStartVoiceRecognition()
@@ -233,29 +205,22 @@ class CookingModeFragment : Fragment() {
     }
 
     private fun startVoiceRecognition() {
-        if (!SpeechRecognizer.isRecognitionAvailable(requireContext())) {
-            Toast.makeText(requireContext(), "Speech recognition not available", Toast.LENGTH_SHORT).show()
+        if (mlKitSpeechRecognizer?.isAvailable() != true) {
+            Toast.makeText(requireContext(), "Speech recognition is not available on this device", Toast.LENGTH_SHORT).show()
             return
         }
-
-        val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak...")
-        }
-
-        speechRecognizer?.startListening(intent)
+        
+        // Start listening with Bulgarian language (can be changed based on user preference)
+        mlKitSpeechRecognizer?.startListening("bg-BG")
     }
 
     private fun stopVoiceRecognition() {
-        speechRecognizer?.stopListening()
-        isListening = false
-        binding.microphoneButton.setIconResource(android.R.drawable.ic_btn_speak_now)
+        mlKitSpeechRecognizer?.stopListening()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        speechRecognizer?.destroy()
+        mlKitSpeechRecognizer?.destroy()
         _binding = null
     }
 }

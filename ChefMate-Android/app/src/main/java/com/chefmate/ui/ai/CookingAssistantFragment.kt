@@ -3,9 +3,6 @@ package com.chefmate.ui.ai
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.text.Editable
 import android.text.TextWatcher
@@ -28,6 +25,7 @@ import com.chefmate.R
 import com.chefmate.databinding.FragmentCookingAssistantBinding
 import com.chefmate.ui.ai.adapter.ChatAdapter
 import com.chefmate.ui.ai.viewmodel.AiViewModel
+import com.chefmate.utils.MlKitSpeechRecognizer
 import com.chefmate.utils.TokenManager
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -42,9 +40,8 @@ class CookingAssistantFragment : Fragment() {
     }
 
     private lateinit var chatAdapter: ChatAdapter
-    private var speechRecognizer: SpeechRecognizer? = null
+    private var mlKitSpeechRecognizer: MlKitSpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
-    private var isListening = false
     private var shouldSpeakResponse = false // Only speak if user used voice input
     private lateinit var tokenManager: TokenManager
     private var autoSpeakEnabled = false
@@ -178,63 +175,37 @@ class CookingAssistantFragment : Fragment() {
     }
 
     private fun setupSpeechRecognizer() {
-        if (SpeechRecognizer.isRecognitionAvailable(requireContext())) {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext())
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {
-                    isListening = true
-                    binding.voiceButton.setIconResource(R.drawable.ic_pause)
-                }
-
-                override fun onBeginningOfSpeech() {}
-
-                override fun onRmsChanged(rmsdB: Float) {}
-
-                override fun onBufferReceived(buffer: ByteArray?) {}
-
-                override fun onEndOfSpeech() {
-                    isListening = false
-                    binding.voiceButton.setIconResource(R.drawable.ic_mic)
-                }
-
-                override fun onError(error: Int) {
-                    isListening = false
-                    binding.voiceButton.setIconResource(R.drawable.ic_mic)
-                    when (error) {
-                        SpeechRecognizer.ERROR_AUDIO -> Toast.makeText(requireContext(), "Audio error", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_CLIENT -> {}
-                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> Toast.makeText(requireContext(), "No microphone permission", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_NETWORK -> Toast.makeText(requireContext(), "Network error", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> Toast.makeText(requireContext(), "Network timeout", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_NO_MATCH -> Toast.makeText(requireContext(), "Speech not recognized", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> Toast.makeText(requireContext(), "Recognizer is busy", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_SERVER -> Toast.makeText(requireContext(), "Server error", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> Toast.makeText(requireContext(), "No speech detected", Toast.LENGTH_SHORT).show()
-                    }
-                }
-
-                override fun onResults(results: Bundle?) {
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) {
-                        val spokenText = matches[0]
-                        binding.messageEditText.setText(spokenText)
-                        // Auto-send voice input and enable speaking for response
-                        shouldSpeakResponse = true
-                        sendMessage(spokenText)
-                    }
-                    isListening = false
-                    binding.voiceButton.setIconResource(R.drawable.ic_mic)
-                }
-
-                override fun onPartialResults(partialResults: Bundle?) {
-                    val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) {
-                        binding.messageEditText.setText(matches[0])
-                    }
-                }
-
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
+        mlKitSpeechRecognizer = MlKitSpeechRecognizer(requireContext())
+        
+        if (!mlKitSpeechRecognizer?.isAvailable()!!) {
+            Toast.makeText(requireContext(), "Speech recognition is not available on this device", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // Setup callbacks
+        mlKitSpeechRecognizer?.onResult = { recognizedText ->
+            binding.messageEditText.setText(recognizedText)
+            // Auto-send voice input and enable speaking for response
+            shouldSpeakResponse = true
+            sendMessage(recognizedText)
+            binding.voiceButton.setIconResource(R.drawable.ic_mic)
+        }
+        
+        mlKitSpeechRecognizer?.onPartialResult = { partialText ->
+            binding.messageEditText.setText(partialText)
+        }
+        
+        mlKitSpeechRecognizer?.onError = { errorMessage ->
+            Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_SHORT).show()
+            binding.voiceButton.setIconResource(R.drawable.ic_mic)
+        }
+        
+        mlKitSpeechRecognizer?.onListeningStateChanged = { isListening ->
+            if (isListening) {
+                binding.voiceButton.setIconResource(R.drawable.ic_pause)
+            } else {
+                binding.voiceButton.setIconResource(R.drawable.ic_mic)
+            }
         }
     }
 
@@ -248,7 +219,7 @@ class CookingAssistantFragment : Fragment() {
         }
 
         binding.voiceButton.setOnClickListener {
-            if (isListening) {
+            if (mlKitSpeechRecognizer?.isCurrentlyListening() == true) {
                 stopVoiceRecognition()
             } else {
                 checkPermissionAndStartVoiceRecognition()
@@ -324,25 +295,17 @@ class CookingAssistantFragment : Fragment() {
     }
 
     private fun startVoiceRecognition() {
-        if (!SpeechRecognizer.isRecognitionAvailable(requireContext())) {
+        if (mlKitSpeechRecognizer?.isAvailable() != true) {
             Toast.makeText(requireContext(), "Speech recognition is not available on this device", Toast.LENGTH_SHORT).show()
             return
         }
-
-        val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "bg-BG")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak...")
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-        }
-
-        speechRecognizer?.startListening(intent)
+        
+        // Start listening with Bulgarian language (can be changed based on user preference)
+        mlKitSpeechRecognizer?.startListening("bg-BG")
     }
 
     private fun stopVoiceRecognition() {
-        speechRecognizer?.stopListening()
-        isListening = false
-        binding.voiceButton.setIconResource(android.R.drawable.ic_btn_speak_now)
+        mlKitSpeechRecognizer?.stopListening()
     }
 
     private fun speakText(text: String) {
@@ -351,7 +314,7 @@ class CookingAssistantFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        speechRecognizer?.destroy()
+        mlKitSpeechRecognizer?.destroy()
         textToSpeech?.stop()
         textToSpeech?.shutdown()
         _binding = null

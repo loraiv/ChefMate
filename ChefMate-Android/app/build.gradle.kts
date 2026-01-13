@@ -76,6 +76,13 @@ dependencies {
     // UCrop for image cropping
     implementation("com.github.yalantis:ucrop:2.2.8")
 
+    // ML Kit Language Identification (for detecting language from text)
+    implementation("com.google.mlkit:language-id:17.0.0")
+    
+    // Note: ML Kit doesn't have direct Speech Recognition API
+    // We use Android's built-in SpeechRecognizer (already available)
+    // For better accuracy, consider Google Cloud Speech-to-Text API
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
