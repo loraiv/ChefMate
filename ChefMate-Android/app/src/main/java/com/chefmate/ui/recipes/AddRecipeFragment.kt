@@ -526,25 +526,21 @@ class AddRecipeFragment : Fragment() {
         )
         binding.titleInputLayout.hint = titleHint
         
-        val descHint = android.text.SpannableStringBuilder("Description ")
-        descHint.append("*")
-        descHint.setSpan(
-            android.text.style.ForegroundColorSpan(errorColor),
-            descHint.length - 1,
-            descHint.length,
-            android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        binding.descriptionInputLayout.hint = descHint
+        // Description is now optional, no asterisk needed
+        binding.descriptionInputLayout.hint = "Description (optional)"
         
-        val prepTimeHint = android.text.SpannableStringBuilder("Preparation Time (minutes) ")
-        prepTimeHint.append("*")
-        prepTimeHint.setSpan(
+        // Preparation time is now optional
+        binding.prepTimeInputLayout.hint = "Preparation Time (minutes) (optional)"
+        
+        val cookTimeHint = android.text.SpannableStringBuilder("Cooking Time (minutes) ")
+        cookTimeHint.append("*")
+        cookTimeHint.setSpan(
             android.text.style.ForegroundColorSpan(errorColor),
-            prepTimeHint.length - 1,
-            prepTimeHint.length,
+            cookTimeHint.length - 1,
+            cookTimeHint.length,
             android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
         )
-        binding.prepTimeInputLayout.hint = prepTimeHint
+        binding.cookTimeInputLayout.hint = cookTimeHint
         
         val diffHint = android.text.SpannableStringBuilder("Difficulty ")
         diffHint.append("*")
@@ -579,30 +575,27 @@ class AddRecipeFragment : Fragment() {
 
     private fun validateForm(): Boolean {
         val title = binding.titleEditText.text?.toString()?.trim() ?: ""
-        val description = binding.descriptionEditText.text?.toString()?.trim() ?: ""
         val difficulty = binding.difficultySpinner.text?.toString() ?: ""
-        val prepTime = binding.prepTimeEditText.text?.toString()?.trim() ?: ""
 
         if (title.isEmpty()) {
             Toast.makeText(requireContext(), "Please enter a title", Toast.LENGTH_SHORT).show()
             return false
         }
 
-        if (description.isEmpty()) {
-            Toast.makeText(requireContext(), "Please enter a description", Toast.LENGTH_SHORT).show()
+        // Description is now optional
+        // Preparation time is now optional
+
+        val cookTime = binding.cookTimeEditText.text?.toString()?.trim() ?: ""
+        if (cookTime.isEmpty()) {
+            Toast.makeText(requireContext(), "Please enter cooking time", Toast.LENGTH_SHORT).show()
+            binding.cookTimeEditText.requestFocus()
             return false
         }
 
-        if (prepTime.isEmpty()) {
-            Toast.makeText(requireContext(), "Please enter preparation time", Toast.LENGTH_SHORT).show()
-            binding.prepTimeEditText.requestFocus()
-            return false
-        }
-
-        val prepTimeInt = prepTime.toIntOrNull()
-        if (prepTimeInt == null || prepTimeInt <= 0) {
-            Toast.makeText(requireContext(), "Please enter a valid preparation time (positive number)", Toast.LENGTH_SHORT).show()
-            binding.prepTimeEditText.requestFocus()
+        val cookTimeInt = cookTime.toIntOrNull()
+        if (cookTimeInt == null || cookTimeInt <= 0) {
+            Toast.makeText(requireContext(), "Please enter a valid cooking time (positive number)", Toast.LENGTH_SHORT).show()
+            binding.cookTimeEditText.requestFocus()
             return false
         }
 
@@ -626,7 +619,7 @@ class AddRecipeFragment : Fragment() {
 
     private fun saveRecipe() {
         val title = binding.titleEditText.text?.toString()?.trim() ?: ""
-        val description = binding.descriptionEditText.text?.toString()?.trim() ?: ""
+        val description = binding.descriptionEditText.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }
         val difficultyText = binding.difficultySpinner.text?.toString() ?: "EASY"
         val difficulty = when (difficultyText) {
             "EASY" -> "EASY"
@@ -635,7 +628,8 @@ class AddRecipeFragment : Fragment() {
             else -> "EASY"
         }
         val prepTime = binding.prepTimeEditText.text?.toString()?.trim()?.toIntOrNull()
-        val cookTime = null
+        val cookTime = binding.cookTimeEditText.text?.toString()?.trim()?.toIntOrNull()
+        val servings = binding.servingsEditText.text?.toString()?.trim()?.toIntOrNull()
 
         if (isEditMode) {
             viewModel.updateRecipe(
@@ -645,7 +639,7 @@ class AddRecipeFragment : Fragment() {
                 difficulty = difficulty,
                 prepTime = prepTime,
                 cookTime = cookTime,
-                servings = null,
+                servings = servings,
                 ingredients = ingredients,
                 steps = steps,
                 imagePaths = selectedImagePaths.takeIf { it.isNotEmpty() },
@@ -658,7 +652,7 @@ class AddRecipeFragment : Fragment() {
                 difficulty = difficulty,
                 prepTime = prepTime,
                 cookTime = cookTime,
-                servings = null,
+                servings = servings,
                 ingredients = ingredients,
                 steps = steps,
                 imagePaths = selectedImagePaths.takeIf { it.isNotEmpty() }
@@ -671,7 +665,7 @@ class AddRecipeFragment : Fragment() {
             recipeRepository.getRecipeById(recipeId)
                 .onSuccess { recipe ->
                     binding.titleEditText.setText(recipe.title)
-                    binding.descriptionEditText.setText(recipe.description)
+                    binding.descriptionEditText.setText(recipe.description ?: "")
                     
                     val difficultyText = when {
                         recipe.difficulty.equals("EASY", ignoreCase = true) -> "EASY"
@@ -682,6 +676,8 @@ class AddRecipeFragment : Fragment() {
                     binding.difficultySpinner.setText(difficultyText)
                     
                     recipe.prepTime?.let { binding.prepTimeEditText.setText(it.toString()) }
+                    recipe.cookTime?.let { binding.cookTimeEditText.setText(it.toString()) }
+                    recipe.servings?.let { binding.servingsEditText.setText(it.toString()) }
                     
                     ingredients.clear()
                     ingredients.addAll(recipe.ingredients)

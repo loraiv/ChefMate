@@ -24,7 +24,7 @@ class AddRecipeViewModel(
 
     fun createRecipe(
         title: String,
-        description: String,
+        description: String?,
         difficulty: String,
         prepTime: Int?,
         cookTime: Int?,
@@ -71,7 +71,7 @@ class AddRecipeViewModel(
     fun updateRecipe(
         recipeId: Long,
         title: String,
-        description: String,
+        description: String?,
         difficulty: String,
         prepTime: Int?,
         cookTime: Int?,

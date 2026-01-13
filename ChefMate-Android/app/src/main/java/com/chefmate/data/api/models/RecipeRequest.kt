@@ -7,7 +7,7 @@ data class RecipeRequest(
     val title: String,
 
     @SerializedName("description")
-    val description: String,
+    val description: String? = null,
 
     @SerializedName("difficulty")
     val difficulty: String,

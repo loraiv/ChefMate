@@ -173,7 +173,14 @@ class RecipeDetailFragment : Fragment() {
 
     private fun displayRecipe(recipe: com.chefmate.data.api.models.RecipeResponse) {
         binding.recipeTitle.text = recipe.title
-        binding.recipeDescription.text = recipe.description
+        
+        // Description - hide if empty
+        if (recipe.description.isNullOrBlank()) {
+            binding.recipeDescription.visibility = View.GONE
+        } else {
+            binding.recipeDescription.visibility = View.VISIBLE
+            binding.recipeDescription.text = recipe.description
+        }
 
         val imageUrls = if (!recipe.imageUrls.isNullOrEmpty()) {
             recipe.imageUrls
@@ -249,6 +256,22 @@ class RecipeDetailFragment : Fragment() {
         // Time
         val time = recipe.totalTime ?: ((recipe.prepTime ?: 0) + (recipe.cookTime ?: 0))
         binding.timeTextView.text = if (time > 0) "⏱ $time min" else "⏱ -"
+        
+        // Servings
+        recipe.servings?.let { servings ->
+            binding.servingsTextView.text = "🍽 $servings ${if (servings == 1) "serving" else "servings"}"
+            binding.servingsTextView.visibility = View.VISIBLE
+        } ?: run {
+            binding.servingsTextView.visibility = View.GONE
+        }
+        
+        // Description - hide if empty
+        if (recipe.description.isNullOrBlank()) {
+            binding.recipeDescription.visibility = View.GONE
+        } else {
+            binding.recipeDescription.visibility = View.VISIBLE
+            binding.recipeDescription.text = recipe.description
+        }
 
         // Ingredients
         ingredientAdapter = IngredientAdapter(recipe.ingredients.toMutableList()) { }

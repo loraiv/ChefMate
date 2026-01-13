@@ -20,9 +20,6 @@ data class CookingContext(
     @SerializedName("totalSteps")
     val totalSteps: Int,
     
-    @SerializedName("elapsedTimeSeconds")
-    val elapsedTimeSeconds: Long,
-    
     @SerializedName("usedIngredients")
     val usedIngredients: List<String>,
     
@@ -33,5 +30,33 @@ data class CookingContext(
     val currentAction: String? = null,
     
     @SerializedName("stoveSetting")
-    val stoveSetting: String? = null // "Low", "Medium", "High", etc.
+    val stoveSetting: String? = null, // "Low", "Medium", "High", etc.
+    
+    // Full recipe information
+    @SerializedName("recipeTitle")
+    val recipeTitle: String? = null,
+    
+    @SerializedName("recipeDescription")
+    val recipeDescription: String? = null,
+    
+    @SerializedName("recipeIngredients")
+    val recipeIngredients: List<String>? = null,
+    
+    @SerializedName("recipeSteps")
+    val recipeSteps: List<String>? = null,
+    
+    @SerializedName("recipeDifficulty")
+    val recipeDifficulty: String? = null,
+    
+    @SerializedName("prepTime")
+    val prepTime: Int? = null,
+    
+    @SerializedName("cookTime")
+    val cookTime: Int? = null,
+    
+    @SerializedName("totalTime")
+    val totalTime: Int? = null,
+    
+    @SerializedName("servings")
+    val servings: Int? = null
 )

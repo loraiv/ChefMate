@@ -18,8 +18,8 @@
             android:layout_height="wrap_content"
             android:layout_margin="16dp"
             app:cardElevation="4dp"
-            app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="16dp"
+            app:strokeWidth="0dp"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
@@ -56,39 +56,6 @@
                         android:text="Step: 1/8"
                         android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text=" | "
-                        android:textSize="16sp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:layout_marginHorizontal="8dp" />
-
-                    <TextView
-                        android:id="@+id/timerText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="00:00"
-                        android:textSize="16sp"
-                        android:textColor="?attr/colorPrimary"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text=" | "
-                        android:textSize="16sp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:layout_marginHorizontal="8dp" />
-
-                    <TextView
-                        android:id="@+id/stoveSettingText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Medium Heat"
-                        android:textSize="16sp"
-                        android:textColor="?attr/colorOnSurface" />
                 </LinearLayout>
 
                 <!-- Divider -->
@@ -120,16 +87,185 @@
                     android:gravity="center"
                     android:layout_marginTop="8dp" />
 
+                <!-- Timer Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/timerCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    app:cardElevation="2dp"
+                    app:cardCornerRadius="12dp"
+                    app:strokeWidth="0dp">
+                    
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+                        
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                            
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Timer"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="?attr/colorOnSurface" />
+                            
+                            <TextView
+                                android:id="@+id/timerDisplayText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="00:00"
+                                android:textSize="24sp"
+                                android:textStyle="bold"
+                                android:textColor="?attr/colorPrimary"
+                                android:layout_marginEnd="12dp" />
+                            
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/timerButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Set Timer"
+                                android:textSize="12sp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                        </LinearLayout>
+                        
+                        <TextView
+                            android:id="@+id/timerLabelText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textSize="12sp"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:layout_marginTop="4dp"
+                            android:visibility="gone" />
+                        
+                        <LinearLayout
+                            android:id="@+id/timerControlsLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center"
+                            android:layout_marginTop="8dp"
+                            android:visibility="gone">
+                            
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/pauseResumeTimerButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="4dp"
+                                android:text="Pause"
+                                android:textSize="12sp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                            
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/stopTimerButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="4dp"
+                                android:text="Stop"
+                                android:textSize="12sp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                        </LinearLayout>
+                        
+                        <!-- Stop Alarm Button (shown when timer finished) -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/stopAlarmButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Stop Alarm"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:visibility="gone"
+                            app:cornerRadius="12dp"
+                            app:backgroundTint="?attr/colorError"
+                            style="@style/Widget.MaterialComponents.Button" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Auto-speak TTS Switch -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp"
+                    android:padding="8dp">
+                    
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Auto-speak AI responses"
+                        android:textSize="14sp"
+                        android:textColor="?attr/colorOnSurface" />
+                    
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/autoSpeakSwitch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Navigation Buttons Row -->
+        <LinearLayout
+            android:id="@+id/navigationButtons"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginHorizontal="16dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            app:layout_constraintTop_toBottomOf="@+id/infoCard"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/previousStepButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="Previous Step"
+                android:textSize="14sp"
+                app:icon="@android:drawable/ic_media_previous"
+                app:iconGravity="textStart"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nextStepButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="Next Step"
+                android:textSize="14sp"
+                app:icon="@android:drawable/ic_media_next"
+                app:iconGravity="textEnd"
+                style="@style/Widget.MaterialComponents.Button" />
+
+        </LinearLayout>
 
         <!-- Large Microphone Button (Center) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/microphoneButton"
             android:layout_width="120dp"
             android:layout_height="120dp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="24dp"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:insetLeft="0dp"
@@ -142,7 +278,7 @@
             app:cornerRadius="60dp"
             app:backgroundTint="?attr/colorPrimary"
             app:elevation="8dp"
-            app:layout_constraintTop_toBottomOf="@+id/infoCard"
+            app:layout_constraintTop_toBottomOf="@+id/navigationButtons"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             style="@style/Widget.MaterialComponents.Button.Icon" />
@@ -155,8 +291,8 @@
             android:layout_margin="16dp"
             android:visibility="gone"
             app:cardElevation="4dp"
-            app:cardBackgroundColor="@color/surface_variant"
             app:cardCornerRadius="16dp"
+            app:strokeWidth="0dp"
             app:layout_constraintTop_toBottomOf="@+id/microphoneButton"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
