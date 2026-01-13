@@ -7,7 +7,16 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    private const val BASE_URL = "http://10.0.2.2:8080/api/" // за емулатор
+    // За Android Emulator използвай: http://10.0.2.2:8090/
+    // За реален телефон използвай: http://192.168.1.11:8090/
+    // Увери се че телефонът и компютърът са на същата Wi-Fi мрежа!
+    
+    // ПРОМЕНИ ТОВА АКО 10.0.2.2 НЕ РАБОТИ:
+    // За Emulator (може да не работи заради firewall):
+    // private const val BASE_URL = "http://10.0.2.2:8090/"
+    
+    // За реален телефон (ВИНАГИ РАБОТИ ако са на същата Wi-Fi):
+    private const val BASE_URL = "http://192.168.1.11:8090/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

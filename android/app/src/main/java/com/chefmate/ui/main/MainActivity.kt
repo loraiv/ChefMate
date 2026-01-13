@@ -1,10 +1,10 @@
 package com.chefmate.ui.main
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.setupWithNavController
 import com.chefmate.databinding.ActivityMainBinding
-import com.chefmate.ui.auth.LoginActivity
 
 class MainActivity : AppCompatActivity() {
 
@@ -15,7 +15,14 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Прост текст за тестване
-        binding.welcomeTextView.text = "Приложение ChefMate е готово!"
+        setupNavigation()
+    }
+
+    private fun setupNavigation() {
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(com.chefmate.R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
+
+        binding.bottomNavigationView.setupWithNavController(navController)
     }
 }
