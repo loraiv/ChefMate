@@ -7,6 +7,18 @@ ChefMate-Android/local.properties
 ChefMate-Android/*.iml
 ChefMate-Android/.DS_Store
 ChefMate-Android/captures/
+android/.gradle/
+android/.idea/
+android/.kotlin/
+android/build/
+android/*.iml
+android/local.properties
+android/gradle.properties
+android/.DS_Store
+android/captures/
+android/.externalNativeBuild/
+android/app/build/
+android/app/.cxx/
 
 # Backend
 chefmate-backend/chefmate-backend/backend/target/
@@ -25,6 +37,19 @@ chefmate-backend/chefmate-backend/backend/*.iws
 !chefmate-backend/chefmate-backend/backend/.env.example
 !chefmate-backend/chefmate-backend/backend/run-with-env.bat
 !chefmate-backend/chefmate-backend/backend/run-with-env.sh
+backend/node_modules/
+backend/.env
+backend/.env.local
+backend/.vscode/
+backend/dist/
+backend/coverage/
+backend/.DS_Store
+backend/.nyc_output/
+
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
 
 # IDE
 .idea/
@@ -52,3 +77,7 @@ logs/
 # Environment
 .env
 .env.local
+
+# Ненужни директории
+ChefMate-Combined/
+/uploads/
