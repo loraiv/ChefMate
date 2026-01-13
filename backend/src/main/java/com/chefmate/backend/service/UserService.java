@@ -249,6 +249,50 @@ public class UserService {
     }
 
     @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        if (currentPassword == null || currentPassword.trim().isEmpty()) {
+            throw new IllegalStateException("Current password cannot be empty!");
+        }
+        
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new IllegalStateException("New password cannot be empty!");
+        }
+        
+        if (newPassword.length() < 6) {
+            throw new IllegalStateException("New password must be at least 6 characters long!");
+        }
+        
+        if (currentPassword.equals(newPassword)) {
+            throw new IllegalStateException("New password must be different from current password!");
+        }
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found!"));
+        
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalStateException("Current password is incorrect!");
+        }
+        
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+        
+        logger.info("Password changed successfully for user: {}", user.getUsername());
+    }
+
+    @Transactional
+    public void updateProfileImageUrl(Long userId, String imageUrl) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found!"));
+        
+        user.setProfileImageUrl(imageUrl);
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+        
+        logger.info("Profile image updated for user ID: {}", userId);
+    }
+
+    @Transactional
     public int deleteAllUsers() {
         logger.info("Starting to delete all users and related data...");
         

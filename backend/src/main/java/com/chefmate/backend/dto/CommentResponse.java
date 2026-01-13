@@ -9,7 +9,6 @@ public class CommentResponse {
     private String username;
     private LocalDateTime createdAt;
 
-    // Constructors
     public CommentResponse() {}
 
     public CommentResponse(Long id, String content, Long userId, String username, LocalDateTime createdAt) {
@@ -20,7 +19,6 @@ public class CommentResponse {
         this.createdAt = createdAt;
     }
 
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

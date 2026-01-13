@@ -13,10 +13,12 @@ public class RecipeResponse {
     private Integer servings;
     private String difficulty;
     private String imageUrl;
+    private List<String> imageUrls;
     private List<String> ingredients;
     private List<String> steps;
     private Long userId;
     private String username;
+    private String userProfileImageUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Integer likesCount;
@@ -32,10 +34,12 @@ public class RecipeResponse {
     public Integer getServings() { return servings; }
     public String getDifficulty() { return difficulty; }
     public String getImageUrl() { return imageUrl; }
+    public List<String> getImageUrls() { return imageUrls; }
     public List<String> getIngredients() { return ingredients; }
     public List<String> getSteps() { return steps; }
     public Long getUserId() { return userId; }
     public String getUsername() { return username; }
+    public String getUserProfileImageUrl() { return userProfileImageUrl; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public Integer getLikesCount() { return likesCount; }
@@ -52,10 +56,12 @@ public class RecipeResponse {
     public void setServings(Integer servings) { this.servings = servings; }
     public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
     public void setIngredients(List<String> ingredients) { this.ingredients = ingredients; }
     public void setSteps(List<String> steps) { this.steps = steps; }
     public void setUserId(Long userId) { this.userId = userId; }
     public void setUsername(String username) { this.username = username; }
+    public void setUserProfileImageUrl(String userProfileImageUrl) { this.userProfileImageUrl = userProfileImageUrl; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public void setLikesCount(Integer likesCount) { this.likesCount = likesCount; }
