@@ -10,19 +10,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.util.concurrent.atomic.AtomicLong
 
 data class CookingSessionState(
     val recipe: RecipeResponse? = null,
     val currentStep: Int = 0,
     val totalSteps: Int = 0,
-    val elapsedTimeSeconds: Long = 0,
     val usedIngredients: List<String> = emptyList(),
     val cookingStage: String? = null,
     val currentAction: String? = null,
     val stoveSetting: String? = null,
+    // Timer state
+    val timerSecondsRemaining: Long = 0,
     val isTimerRunning: Boolean = false,
-    val startTime: Long? = null
+    val isTimerPaused: Boolean = false,
+    val isTimerFinished: Boolean = false,
+    val timerLabel: String? = null
 )
 
 class CookingModeViewModel(private val context: android.content.Context) : ViewModel() {
@@ -41,21 +45,17 @@ class CookingModeViewModel(private val context: android.content.Context) : ViewM
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
     
-    private var timerJob: kotlinx.coroutines.Job? = null
+    private var localTimerJob: kotlinx.coroutines.Job? = null
     
     fun startCookingSession(recipe: RecipeResponse) {
         _sessionState.value = CookingSessionState(
             recipe = recipe,
             currentStep = 0,
             totalSteps = recipe.steps.size,
-            elapsedTimeSeconds = 0,
             usedIngredients = emptyList(),
             cookingStage = "preparation",
-            currentAction = if (recipe.steps.isNotEmpty()) recipe.steps[0] else null,
-            isTimerRunning = true,
-            startTime = System.currentTimeMillis()
+            currentAction = if (recipe.steps.isNotEmpty()) recipe.steps[0] else null
         )
-        startTimer()
     }
     
     fun nextStep() {
@@ -103,23 +103,132 @@ class CookingModeViewModel(private val context: android.content.Context) : ViewM
         _sessionState.value = state.copy(stoveSetting = setting)
     }
     
-    private fun startTimer() {
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            while (_sessionState.value.isTimerRunning) {
-                kotlinx.coroutines.delay(1000)
-                val state = _sessionState.value
-                val startTime = state.startTime ?: continue
-                val elapsed = (System.currentTimeMillis() - startTime) / 1000
-                _sessionState.value = state.copy(elapsedTimeSeconds = elapsed)
+    fun startTimer(seconds: Long, label: String? = null) {
+        try {
+            val state = _sessionState.value
+            _sessionState.value = state.copy(
+                timerSecondsRemaining = seconds,
+                isTimerRunning = true,
+                isTimerPaused = false,
+                isTimerFinished = false,
+                timerLabel = label
+            )
+            
+            // Start local timer for UI updates
+            startLocalTimer(seconds)
+            
+            // Start foreground service for background timer
+            com.chefmate.service.TimerService.startTimer(context, seconds, label)
+        } catch (e: Exception) {
+            android.util.Log.e("CookingModeViewModel", "Error starting timer", e)
+            // Update state to reflect error
+            val state = _sessionState.value
+            _sessionState.value = state.copy(
+                isTimerRunning = false,
+                isTimerPaused = false,
+                timerSecondsRemaining = 0
+            )
+            _error.value = "Failed to start timer: ${e.message}"
+        }
+    }
+    
+    fun pauseTimer() {
+        val state = _sessionState.value
+        if (state.isTimerRunning && !state.isTimerPaused) {
+            localTimerJob?.cancel()
+            _sessionState.value = state.copy(isTimerPaused = true)
+            com.chefmate.service.TimerService.pauseTimer(context)
+        }
+    }
+    
+    fun resumeTimer() {
+        val state = _sessionState.value
+        if (state.isTimerRunning && state.isTimerPaused) {
+            startLocalTimer(state.timerSecondsRemaining)
+            _sessionState.value = state.copy(isTimerPaused = false)
+            com.chefmate.service.TimerService.resumeTimer(context)
+        }
+    }
+    
+    private fun startLocalTimer(initialSeconds: Long) {
+        localTimerJob?.cancel()
+        var remaining = initialSeconds
+        
+        localTimerJob = viewModelScope.launch {
+            while (remaining > 0) {
+                delay(1000)
+                
+                // Check if paused
+                var state = _sessionState.value
+                while (state.isTimerPaused) {
+                    delay(100)
+                    state = _sessionState.value
+                }
+                
+                remaining--
+                
+                state = _sessionState.value
+                if (state.isTimerRunning && !state.isTimerPaused) {
+                    _sessionState.value = state.copy(timerSecondsRemaining = remaining)
+                    
+                    // If timer reached 0, mark as finished
+                    if (remaining <= 0) {
+                        _sessionState.value = state.copy(
+                            isTimerRunning = false,
+                            isTimerPaused = false,
+                            isTimerFinished = true,
+                            timerSecondsRemaining = 0
+                        )
+                    }
+                } else {
+                    // Timer was stopped or paused externally
+                    break
+                }
             }
         }
     }
     
     fun stopTimer() {
-        timerJob?.cancel()
+        localTimerJob?.cancel()
+        localTimerJob = null
+        
         val state = _sessionState.value
-        _sessionState.value = state.copy(isTimerRunning = false)
+        _sessionState.value = state.copy(
+            isTimerRunning = false,
+            isTimerPaused = false,
+            isTimerFinished = false,
+            timerSecondsRemaining = 0
+        )
+        // Stop foreground service
+        com.chefmate.service.TimerService.stopTimer(context)
+    }
+    
+    fun updateTimerRemaining(seconds: Long) {
+        // This is called from BroadcastReceiver to sync with service
+        // The local timer handles the countdown, but we sync if there's a discrepancy
+        val state = _sessionState.value
+        if (state.isTimerRunning) {
+            val currentRemaining = state.timerSecondsRemaining
+            // Only update if there's a significant difference (more than 2 seconds)
+            // This prevents conflicts with local timer
+            if (kotlin.math.abs(currentRemaining - seconds) > 2) {
+                android.util.Log.d("CookingModeViewModel", "Syncing timer: $currentRemaining -> $seconds seconds")
+                _sessionState.value = state.copy(timerSecondsRemaining = seconds)
+                
+                // Restart local timer with synced value
+                localTimerJob?.cancel()
+                startLocalTimer(seconds)
+            }
+            
+            // If timer reached 0, stop it
+            if (seconds <= 0) {
+                localTimerJob?.cancel()
+                _sessionState.value = state.copy(
+                    isTimerRunning = false,
+                    timerSecondsRemaining = 0
+                )
+            }
+        }
     }
     
     fun sendVoiceMessage(message: String) {
@@ -130,19 +239,31 @@ class CookingModeViewModel(private val context: android.content.Context) : ViewM
         
         viewModelScope.launch {
             val state = _sessionState.value
+            val recipe = state.recipe
+            
+            // Create cooking context with full recipe information
             val cookingContext = CookingContext(
                 currentStep = state.currentStep + 1, // 1-indexed for display
                 totalSteps = state.totalSteps,
-                elapsedTimeSeconds = state.elapsedTimeSeconds,
                 usedIngredients = state.usedIngredients,
                 cookingStage = state.cookingStage,
                 currentAction = state.currentAction,
-                stoveSetting = state.stoveSetting
+                stoveSetting = state.stoveSetting,
+                // Full recipe data for AI
+                recipeTitle = recipe?.title,
+                recipeDescription = recipe?.description,
+                recipeIngredients = recipe?.ingredients,
+                recipeSteps = recipe?.steps,
+                recipeDifficulty = recipe?.difficulty,
+                prepTime = recipe?.prepTime,
+                cookTime = recipe?.cookTime,
+                totalTime = recipe?.totalTime,
+                servings = recipe?.servings
             )
             
             aiRepository.chatWithAI(
                 message = message,
-                recipeId = state.recipe?.id,
+                recipeId = recipe?.id,
                 cookingContext = cookingContext
             )
                 .onSuccess { response ->
@@ -166,7 +287,7 @@ class CookingModeViewModel(private val context: android.content.Context) : ViewM
     
     override fun onCleared() {
         super.onCleared()
-        timerJob?.cancel()
+        localTimerJob?.cancel()
     }
 }
 
