@@ -1,5 +1,6 @@
 package com.chefmate.data.api
 
+import com.chefmate.BuildConfig
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
@@ -9,7 +10,11 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    const val BASE_URL = "http://192.168.1.11:8090/"
+    const val BASE_URL = BuildConfig.BASE_URL
+
+    init {
+        android.util.Log.d("ApiClient", "Initializing ApiClient with BASE_URL: $BASE_URL")
+    }
 
     private val gson: Gson = GsonBuilder()
         .setLenient()
@@ -33,6 +38,7 @@ object ApiClient {
         .build()
 
     val apiService: ApiService by lazy {
+        android.util.Log.d("ApiClient", "Creating ApiService with base URL: $BASE_URL")
         retrofit.create(ApiService::class.java)
     }
 }

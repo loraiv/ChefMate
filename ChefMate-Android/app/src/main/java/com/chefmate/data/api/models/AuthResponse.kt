@@ -22,5 +22,8 @@ data class AuthResponse(
     val firstName: String? = null,
     
     @SerializedName("lastName")
-    val lastName: String? = null
+    val lastName: String? = null,
+    
+    @SerializedName("role")
+    val role: String? = null
 )

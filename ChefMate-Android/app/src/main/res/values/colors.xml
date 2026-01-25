@@ -66,4 +66,7 @@
     <color name="password_medium">#C9A882</color>
     <color name="password_strong">#6B9B6B</color>
     <color name="password_very_strong">#5A7A5A</color>
+    
+    <!-- Toolbar background color - dark green for light theme -->
+    <color name="toolbar_background">#5A7A5A</color>
 </resources>

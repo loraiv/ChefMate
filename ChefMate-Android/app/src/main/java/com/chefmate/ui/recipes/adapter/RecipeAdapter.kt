@@ -1,9 +1,12 @@
 package com.chefmate.ui.recipes.adapter
 
 import android.view.LayoutInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -14,7 +17,9 @@ import com.chefmate.data.api.models.RecipeResponse
 
 class RecipeAdapter(
     private val onRecipeClick: (RecipeResponse) -> Unit,
-    private val onLikeClick: (RecipeResponse) -> Unit
+    private val onLikeClick: (RecipeResponse) -> Unit,
+    private val onDeleteClick: ((RecipeResponse) -> Unit)? = null,
+    private val isAdminView: Boolean = false
 ) : ListAdapter<RecipeResponse, RecipeAdapter.RecipeViewHolder>(RecipeDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecipeViewHolder {
@@ -35,6 +40,7 @@ class RecipeAdapter(
         private val timeTextView: TextView = itemView.findViewById(R.id.timeTextView)
         private val likeIcon: ImageView = itemView.findViewById(R.id.likeIcon)
         private val likesCountTextView: TextView = itemView.findViewById(R.id.likesCountTextView)
+        private val adminMenuButton: ImageButton? = itemView.findViewById(R.id.adminMenuButton)
 
         fun bind(recipe: RecipeResponse) {
             titleTextView.text = recipe.title
@@ -86,6 +92,32 @@ class RecipeAdapter(
             // Click listeners
             itemView.setOnClickListener { onRecipeClick(recipe) }
             likeIcon.setOnClickListener { onLikeClick(recipe) }
+
+            // Admin menu button
+            if (isAdminView && adminMenuButton != null && onDeleteClick != null) {
+                adminMenuButton.visibility = View.VISIBLE
+                adminMenuButton.setOnClickListener { view ->
+                    showAdminMenu(view, recipe)
+                }
+            } else {
+                adminMenuButton?.visibility = View.GONE
+            }
+        }
+
+        private fun showAdminMenu(view: View, recipe: RecipeResponse) {
+            val popup = PopupMenu(view.context, view)
+            popup.menuInflater.inflate(R.menu.recipe_admin_menu, popup.menu)
+
+            popup.setOnMenuItemClickListener { item: MenuItem ->
+                when (item.itemId) {
+                    R.id.menu_delete_recipe -> {
+                        onDeleteClick?.invoke(recipe)
+                        true
+                    }
+                    else -> false
+                }
+            }
+            popup.show()
         }
     }
 

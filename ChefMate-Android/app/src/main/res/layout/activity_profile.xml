@@ -95,6 +95,28 @@
                 app:icon="@drawable/ic_recipes"
                 app:iconGravity="textEnd" />
 
+            <!-- Admin Panel Button (only for admins) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/adminPanelButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Admin Panel"
+                android:textSize="16sp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                app:icon="@drawable/ic_settings"
+                app:iconGravity="textEnd" />
+
+            <!-- Change Username Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/changeUsernameButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Change Username"
+                android:textSize="16sp"
+                android:layout_marginBottom="16dp"
+                app:icon="@android:drawable/ic_menu_edit" />
+
             <!-- Change Password Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/changePasswordButton"

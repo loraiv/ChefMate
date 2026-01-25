@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chefmate.data.repository.RecipeRepository
 import com.chefmate.data.repository.ShoppingRepository
+import com.chefmate.data.repository.AdminRepository
 import com.chefmate.data.api.models.RecipeResponse
+import com.chefmate.utils.TokenManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +14,8 @@ import kotlinx.coroutines.launch
 
 class RecipeDetailViewModel(
     private val recipeRepository: RecipeRepository,
-    private val shoppingRepository: ShoppingRepository
+    private val shoppingRepository: ShoppingRepository,
+    private val adminRepository: AdminRepository? = null
 ) : ViewModel() {
 
     private val _recipe = MutableStateFlow<RecipeResponse?>(null)
@@ -84,18 +87,25 @@ class RecipeDetailViewModel(
         _shoppingListMessage.value = null
     }
 
-    fun deleteRecipe(recipeId: Long) {
+    fun deleteRecipe(recipeId: Long, isAdmin: Boolean = false) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
-            recipeRepository.deleteRecipe(recipeId)
-                .onSuccess {
-                    _error.value = "Recipe deleted successfully"
-                }
-                .onFailure { exception ->
+            val result = if (isAdmin && adminRepository != null) {
+                adminRepository.deleteRecipeAsAdmin(recipeId).map { true }
+            } else {
+                recipeRepository.deleteRecipe(recipeId).map { true }
+            }
+
+            result.fold(
+                onSuccess = {
+                    _error.value = if (isAdmin) "Recipe deleted successfully (admin)" else "Recipe deleted successfully"
+                },
+                onFailure = { exception ->
                     _error.value = exception.message ?: "Error deleting recipe"
                 }
+            )
 
             _isLoading.value = false
         }
@@ -108,12 +118,13 @@ class RecipeDetailViewModel(
 
 class RecipeDetailViewModelFactory(
     private val recipeRepository: RecipeRepository,
-    private val shoppingRepository: ShoppingRepository
+    private val shoppingRepository: ShoppingRepository,
+    private val adminRepository: AdminRepository? = null
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(RecipeDetailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return RecipeDetailViewModel(recipeRepository, shoppingRepository) as T
+            return RecipeDetailViewModel(recipeRepository, shoppingRepository, adminRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

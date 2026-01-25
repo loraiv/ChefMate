@@ -33,6 +33,7 @@ class TokenManager(private val context: Context) {
             .remove("user_email")
             .remove("user_first_name")
             .remove("user_last_name")
+            .remove("user_role")
             .remove("profile_image_path")
             .apply()
     }
@@ -71,12 +72,13 @@ class TokenManager(private val context: Context) {
             .apply()
     }
 
-    fun saveUserInfo(username: String, email: String, firstName: String? = null, lastName: String? = null) {
+    fun saveUserInfo(username: String, email: String, firstName: String? = null, lastName: String? = null, role: String? = null) {
         sharedPreferences.edit()
             .putString("user_username", username)
             .putString("user_email", email)
             .putString("user_first_name", firstName)
             .putString("user_last_name", lastName)
+            .putString("user_role", role)
             .apply()
     }
 
@@ -96,12 +98,19 @@ class TokenManager(private val context: Context) {
         return sharedPreferences.getString("user_last_name", null)
     }
 
+    fun saveUsername(username: String) {
+        sharedPreferences.edit()
+            .putString("user_username", username)
+            .apply()
+    }
+
     fun clearUserInfo() {
         sharedPreferences.edit()
             .remove("user_username")
             .remove("user_email")
             .remove("user_first_name")
             .remove("user_last_name")
+            .remove("user_role")
             .remove("profile_image_path")
             .apply()
     }
@@ -133,5 +142,19 @@ class TokenManager(private val context: Context) {
 
     fun isAutoSpeakEnabled(): Boolean {
         return sharedPreferences.getBoolean("ai_auto_speak", false)
+    }
+
+    fun saveUserRole(role: String) {
+        sharedPreferences.edit()
+            .putString("user_role", role)
+            .apply()
+    }
+
+    fun getUserRole(): String? {
+        return sharedPreferences.getString("user_role", null)
+    }
+
+    fun isAdmin(): Boolean {
+        return getUserRole() == "ADMIN"
     }
 }

@@ -4,14 +4,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.chefmate.R
 import com.chefmate.ui.ai.viewmodel.ChatMessage
 import com.google.android.material.card.MaterialCardView
 
-class ChatAdapter(
-    private val messages: List<ChatMessage>
-) : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
+class ChatAdapter : ListAdapter<ChatMessage, ChatAdapter.ChatViewHolder>(ChatMessageDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -20,10 +20,8 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
-        holder.bind(messages[position])
+        holder.bind(getItem(position))
     }
-
-    override fun getItemCount(): Int = messages.size
 
     class ChatViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val userMessageCard: MaterialCardView = itemView.findViewById(R.id.userMessageCard)
@@ -43,6 +41,16 @@ class ChatAdapter(
                 aiMessageCard.visibility = View.VISIBLE
                 aiMessageText.text = message.message
             }
+        }
+    }
+
+    class ChatMessageDiffCallback : DiffUtil.ItemCallback<ChatMessage>() {
+        override fun areItemsTheSame(oldItem: ChatMessage, newItem: ChatMessage): Boolean {
+            return oldItem.timestamp == newItem.timestamp && oldItem.isUser == newItem.isUser
+        }
+
+        override fun areContentsTheSame(oldItem: ChatMessage, newItem: ChatMessage): Boolean {
+            return oldItem == newItem
         }
     }
 }

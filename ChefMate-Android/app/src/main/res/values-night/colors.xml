@@ -30,5 +30,8 @@
     <!-- Divider - Soft -->
     <color name="divider">#3A3A3A</color>
     <color name="border">#454545</color>
+    
+    <!-- Toolbar background color - light brown/beige for dark theme -->
+    <color name="toolbar_background">#D4B89B</color>
 </resources>
 

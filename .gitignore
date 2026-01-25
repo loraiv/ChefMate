@@ -1,83 +1,361 @@
-# Android
-ChefMate-Android/.gradle/
-ChefMate-Android/.idea/
-ChefMate-Android/build/
-ChefMate-Android/app/build/
-ChefMate-Android/local.properties
-ChefMate-Android/*.iml
-ChefMate-Android/.DS_Store
-ChefMate-Android/captures/
-android/.gradle/
-android/.idea/
-android/.kotlin/
-android/build/
-android/*.iml
-android/local.properties
-android/gradle.properties
-android/.DS_Store
-android/captures/
-android/.externalNativeBuild/
-android/app/build/
-android/app/.cxx/
+# ============================================
+# Android Project
+# ============================================
+chefmate-android/.gradle/
+chefmate-android/.idea/
+chefmate-android/build/
+chefmate-android/app/build/
+chefmate-android/app/.cxx/
+chefmate-android/local.properties
+chefmate-android/*.iml
+chefmate-android/.DS_Store
+chefmate-android/captures/
+chefmate-android/.externalNativeBuild/
+chefmate-android/.kotlin/
+chefmate-android/app/.cxx/
+chefmate-android/app/proguard/
 
-# Backend
-chefmate-backend/chefmate-backend/backend/target/
-chefmate-backend/chefmate-backend/backend/.env
-chefmate-backend/chefmate-backend/backend/.env.local
-chefmate-backend/chefmate-backend/backend/logs/
-chefmate-backend/chefmate-backend/backend/uploads/
-chefmate-backend/chefmate-backend/backend/*.log
-chefmate-backend/chefmate-backend/backend/*.iml
-chefmate-backend/chefmate-backend/backend/*.ipr
-chefmate-backend/chefmate-backend/backend/*.iws
-!chefmate-backend/chefmate-backend/backend/src/
-!chefmate-backend/chefmate-backend/backend/pom.xml
-!chefmate-backend/chefmate-backend/backend/mvnw
-!chefmate-backend/chefmate-backend/backend/mvnw.cmd
-!chefmate-backend/chefmate-backend/backend/.env.example
-!chefmate-backend/chefmate-backend/backend/run-with-env.bat
-!chefmate-backend/chefmate-backend/backend/run-with-env.sh
-backend/node_modules/
-backend/.env
-backend/.env.local
-backend/.vscode/
-backend/dist/
-backend/coverage/
-backend/.DS_Store
-backend/.nyc_output/
+# Android build outputs
+chefmate-android/**/build/
+chefmate-android/**/*.apk
+chefmate-android/**/*.ap_
+chefmate-android/**/*.aab
+chefmate-android/**/*.dex
+chefmate-android/**/*.class
+chefmate-android/**/proguard/
+chefmate-android/**/lint-results*.xml
+chefmate-android/**/lint-results*.html
+chefmate-android/**/output.json
+
+# Android Studio
+chefmate-android/.idea/
+chefmate-android/*.iml
+chefmate-android/.idea/workspace.xml
+chefmate-android/.idea/tasks.xml
+chefmate-android/.idea/gradle.xml
+chefmate-android/.idea/assetWizardSettings.xml
+chefmate-android/.idea/dictionaries
+chefmate-android/.idea/libraries
+chefmate-android/.idea/jarRepositories.xml
+chefmate-android/.idea/caches
+chefmate-android/.idea/modules.xml
+chefmate-android/.idea/.name
+chefmate-android/.idea/navEditor.xml
+chefmate-android/.idea/render.experimental.xml
+
+# ============================================
+# Backend Project (Spring Boot / Maven)
+# ============================================
+chefmate-backend/target/
+chefmate-backend/.mvn/timing.properties
+chefmate-backend/logs/
+chefmate-backend/uploads/
+chefmate-backend/*.log
+chefmate-backend/*.log.*
+chefmate-backend/*.gz
+chefmate-backend/*.iml
+chefmate-backend/*.ipr
+chefmate-backend/*.iws
+chefmate-backend/.idea/
+chefmate-backend/.DS_Store
+chefmate-backend/.env
+chefmate-backend/.env.local
+chefmate-backend/.env.*.local
 
 # Maven
-target/
-!.mvn/wrapper/maven-wrapper.jar
-.mvn/wrapper/maven-wrapper.properties
+chefmate-backend/target/
+chefmate-backend/pom.xml.tag
+chefmate-backend/pom.xml.releaseBackup
+chefmate-backend/pom.xml.versionsBackup
+chefmate-backend/pom.xml.next
+chefmate-backend/release.properties
+chefmate-backend/dependency-reduced-pom.xml
+chefmate-backend/buildNumber.properties
+chefmate-backend/.mvn/timing.properties
+# Note: maven-wrapper.properties SHOULD be committed (removed from ignore list)
 
-# IDE
+# Spring Boot
+chefmate-backend/HELP.md
+chefmate-backend/.springBeans
+chefmate-backend/sts4-cache/
+
+# ============================================
+# IDE Files
+# ============================================
 .idea/
 .vscode/
 *.iml
 *.ipr
 *.iws
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.loadpath
+.externalToolBuilders/
+.factorypath
+.buildpath
+.target
+.idea_modules/
+*.launch
+*.pydevproject
+.cproject
+.autotools
+.remote-sync.json
 
-# OS
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries
+.idea/shelf/
+.idea/.name
+.idea/compiler.xml
+.idea/copyright/profiles_settings.xml
+.idea/encodings.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/scopes/scope_settings.xml
+.idea/vcs.xml
+.idea/jsLibraryMappings.xml
+.idea/dataSources.ids
+.idea/dataSources.local.xml
+.idea/sqlDataSources.xml
+.idea/dynamic.xml
+.idea/uiDesigner.xml
+.idea/dbnavigator.xml
+
+# Eclipse
+.classpath
+.project
+.settings/
+.metadata/
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.loadpath
+.externalToolBuilders/
+.factorypath
+.buildpath
+.target
+.remote_sync.json
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ============================================
+# OS Files
+# ============================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 *.tmp
 *.temp
+*.swp
+*.swo
+*~
 
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================
 # Logs
+# ============================================
 logs/
 *.log
 *.log.*
+*.gz
+*.log.gz
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
-# Archives
+# ============================================
+# Environment & Secrets
+# ============================================
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+*.cert
+secrets/
+.secrets/
+
+# ============================================
+# Build & Distribution
+# ============================================
+build/
+dist/
+out/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+!chefmate-android/gradle/wrapper/gradle-wrapper.jar
+!chefmate-backend/.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.war
+*.ear
+*.nar
 *.zip
 *.tar
 *.tar.gz
+*.rar
+*.7z
+*.bin
 
-# Environment
-.env
-.env.local
+# ============================================
+# Test Coverage
+# ============================================
+coverage/
+.nyc_output/
+*.lcov
+.coveralls.yml
+test-results/
+test-results.xml
 
-# Ненужни директории
+# ============================================
+# Temporary Files
+# ============================================
+*.tmp
+*.temp
+*.cache
+.cache/
+tmp/
+temp/
+*.pid
+*.seed
+*.pid.lock
+
+# ============================================
+# Uploads & User Content
+# ============================================
+uploads/
+**/uploads/
+chefmate-backend/uploads/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.webp
+!**/src/main/res/**/*.png
+!**/src/main/res/**/*.jpg
+!**/src/main/res/**/*.webp
+!**/src/main/res/**/*.gif
+
+# ============================================
+# Database
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# ============================================
+# Node.js (if used)
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+.node_repl_history
+*.tgz
+.yarn-integrity
+.pnp
+.pnp.js
+
+# ============================================
+# Python (if used)
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# ============================================
+# Other
+# ============================================
+*.class
+*.lock
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Project specific
 ChefMate-Combined/
-/uploads/
+*.orig
+*.rej

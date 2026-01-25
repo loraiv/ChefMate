@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -23,6 +24,7 @@ import com.chefmate.R
 import com.chefmate.data.repository.AuthRepository
 import com.chefmate.databinding.ActivityProfileBinding
 import com.chefmate.ui.auth.LoginActivity
+import com.chefmate.ui.main.MainActivity
 import com.chefmate.utils.TokenManager
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.launch
@@ -82,11 +84,11 @@ class ProfileActivity : AppCompatActivity() {
             resultUri?.let { uri ->
                 saveProfileImage(uri)
             } ?: run {
-                Toast.makeText(this, "Error processing image", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Unable to process the image. Please try again.", Toast.LENGTH_SHORT).show()
             }
         } else if (result.resultCode == UCrop.RESULT_ERROR && result.data != null) {
             val cropError = UCrop.getError(result.data!!)
-            Toast.makeText(this, "Error processing image: ${cropError?.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Unable to crop the image. Please try again.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -101,6 +103,8 @@ class ProfileActivity : AppCompatActivity() {
         loadUserInfo()
         setupProfileImage()
         setupMyRecipes()
+        setupAdminPanel()
+        setupChangeUsername()
         setupChangePassword()
         setupThemeToggle()
         setupLogout()
@@ -202,7 +206,7 @@ class ProfileActivity : AppCompatActivity() {
             currentImageUri = photoURI
             cameraLauncher.launch(photoURI)
         } catch (e: Exception) {
-            Toast.makeText(this, "Error opening camera: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Unable to open camera. Please check camera permissions.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -220,7 +224,7 @@ class ProfileActivity : AppCompatActivity() {
                     input.copyTo(output)
                 }
             } ?: run {
-                Toast.makeText(this, "Error reading image", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Unable to read the selected image. Please try again.", Toast.LENGTH_SHORT).show()
                 return
             }
             
@@ -250,7 +254,7 @@ class ProfileActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
             Log.e("ProfileActivity", "Error in startCrop: ${e.message}", e)
-            Toast.makeText(this, "Error processing image: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Unable to process the image. Please try again.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -268,7 +272,7 @@ class ProfileActivity : AppCompatActivity() {
                         input.copyTo(output)
                     }
                 } ?: run {
-                    Toast.makeText(this@ProfileActivity, "Error reading image", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ProfileActivity, "Unable to read the selected image. Please try again.", Toast.LENGTH_SHORT).show()
                     return@launch
                 }
                 
@@ -293,11 +297,11 @@ class ProfileActivity : AppCompatActivity() {
                     .circleCrop()
                     .into(binding.profileImageView)
                 
-                Toast.makeText(this@ProfileActivity, "Profile picture saved", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@ProfileActivity, "Profile picture updated successfully", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 e.printStackTrace()
                 Log.e("ProfileActivity", "Error saving profile image: ${e.message}", e)
-                Toast.makeText(this@ProfileActivity, "Error saving image: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@ProfileActivity, "Unable to save profile picture. Please try again.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -357,10 +361,10 @@ class ProfileActivity : AppCompatActivity() {
                         Glide.with(this@ProfileActivity).clear(binding.profileImageView)
                         
                         loadDefaultImage()
-                        Toast.makeText(this@ProfileActivity, "Profile picture deleted", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ProfileActivity, "Profile picture removed successfully", Toast.LENGTH_SHORT).show()
                     } catch (e: Exception) {
                         Log.e("ProfileActivity", "Error deleting profile image: ${e.message}", e)
-                        Toast.makeText(this@ProfileActivity, "Error deleting image: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ProfileActivity, "Unable to delete profile picture. Please try again.", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -369,6 +373,11 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun setupMyRecipes() {
+        if (tokenManager.isAdmin()) {
+            binding.myRecipesButton.visibility = View.GONE
+            return
+        }
+        
         binding.myRecipesButton.setOnClickListener {
             val userId = tokenManager.getUserId()?.toLongOrNull()
             if (userId != null) {
@@ -382,7 +391,109 @@ class ProfileActivity : AppCompatActivity() {
                 startActivity(intent)
                 finish()
             } else {
-                Toast.makeText(this, "Error: You are not logged in", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Please sign in to continue", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun setupAdminPanel() {
+        val userRole = tokenManager.getUserRole()
+        val isAdmin = tokenManager.isAdmin()
+        Log.d("ProfileActivity", "User role: $userRole, isAdmin: $isAdmin")
+        
+        if (isAdmin) {
+            binding.adminPanelButton.visibility = View.VISIBLE
+            binding.adminPanelButton.setOnClickListener {
+                navigateToAdminPanel()
+            }
+        } else {
+            binding.adminPanelButton.visibility = View.GONE
+        }
+    }
+
+    private fun navigateToAdminPanel() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            putExtra("navigateTo", "adminPanel")
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    private fun setupChangeUsername() {
+        if (tokenManager.isAdmin()) {
+            binding.changeUsernameButton.visibility = android.view.View.GONE
+            return
+        }
+
+        binding.changeUsernameButton.setOnClickListener {
+            showChangeUsernameDialog()
+        }
+    }
+
+    private fun showChangeUsernameDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_username_change, null)
+        val editNewUsername = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editNewUsername)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Change Username")
+            .setView(dialogView)
+            .setPositiveButton("Change") { _, _ ->
+                val newUsername = editNewUsername.text?.toString()?.trim() ?: ""
+                if (validateUsernameChange(newUsername)) {
+                    changeUsername(newUsername)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.show()
+    }
+
+    private fun validateUsernameChange(newUsername: String): Boolean {
+        if (newUsername.isEmpty()) {
+            Toast.makeText(this, "Username cannot be empty", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        if (newUsername.length < 3) {
+            Toast.makeText(this, "Username must be at least 3 characters", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        if (newUsername == tokenManager.getUsername()) {
+                Toast.makeText(this, "New username must be different from your current username", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        return true
+    }
+
+    private fun changeUsername(newUsername: String) {
+        val token = tokenManager.getToken() ?: return
+        binding.changeUsernameButton.isEnabled = false
+
+        lifecycleScope.launch {
+            try {
+                val result = authRepository.changeUsername(token, newUsername)
+                result.fold(
+                    onSuccess = { username ->
+                        tokenManager.saveUsername(username)
+                        loadUserInfo()
+                        Toast.makeText(this@ProfileActivity, "Username updated successfully", Toast.LENGTH_SHORT).show()
+                    },
+                    onFailure = { exception ->
+                        val userFriendlyMessage = when {
+                            exception.message?.contains("already taken", ignoreCase = true) == true -> 
+                                "This username is already taken. Please choose a different one."
+                            exception.message?.contains("network", ignoreCase = true) == true -> 
+                                "Network error. Please check your internet connection and try again."
+                            else -> 
+                                "Unable to change username. Please try again later."
+                        }
+                        Toast.makeText(this@ProfileActivity, userFriendlyMessage, Toast.LENGTH_LONG).show()
+                    }
+                )
+            } catch (e: Exception) {
+                Toast.makeText(this@ProfileActivity, "An unexpected error occurred. Please try again.", Toast.LENGTH_SHORT).show()
+            } finally {
+                binding.changeUsernameButton.isEnabled = true
             }
         }
     }
@@ -551,11 +662,20 @@ class ProfileActivity : AppCompatActivity() {
             val authToken = if (token.startsWith("Bearer ")) token else "Bearer $token"
             authRepository.changePassword(authToken, currentPassword, newPassword)
                 .onSuccess {
-                    Toast.makeText(this@ProfileActivity, "Password changed successfully!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ProfileActivity, "Password changed successfully", Toast.LENGTH_SHORT).show()
                 }
                 .onFailure { error ->
-                    val errorMessage = error.message ?: "Error changing password"
-                    Toast.makeText(this@ProfileActivity, errorMessage, Toast.LENGTH_LONG).show()
+                    val userFriendlyMessage = when {
+                        error.message?.contains("incorrect", ignoreCase = true) == true -> 
+                            "Current password is incorrect. Please try again."
+                        error.message?.contains("must be different", ignoreCase = true) == true -> 
+                            "New password must be different from your current password."
+                        error.message?.contains("network", ignoreCase = true) == true -> 
+                            "Network error. Please check your internet connection and try again."
+                        else -> 
+                            "Unable to change password. Please try again later."
+                    }
+                    Toast.makeText(this@ProfileActivity, userFriendlyMessage, Toast.LENGTH_LONG).show()
                 }
             
             binding.changePasswordButton.isEnabled = true
@@ -584,7 +704,7 @@ class ProfileActivity : AppCompatActivity() {
         tokenManager.clearUserInfo()
         tokenManager.clearRememberMeCredentials()
 
-        Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "You have been signed out successfully", Toast.LENGTH_SHORT).show()
 
         val intent = Intent(this, LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -668,8 +788,13 @@ class ProfileActivity : AppCompatActivity() {
                     finish()
                 }
                 .onFailure { error ->
-                    val errorMessage = error.message ?: "Error deleting account"
-                    Toast.makeText(this@ProfileActivity, errorMessage, Toast.LENGTH_LONG).show()
+                    val userFriendlyMessage = when {
+                        error.message?.contains("network", ignoreCase = true) == true -> 
+                            "Network error. Please check your internet connection and try again."
+                        else -> 
+                            "Unable to delete account. Please try again later."
+                    }
+                    Toast.makeText(this@ProfileActivity, userFriendlyMessage, Toast.LENGTH_LONG).show()
                     binding.deleteAccountButton.isEnabled = true
                     binding.deleteAccountButton.text = "Delete Account"
                 }

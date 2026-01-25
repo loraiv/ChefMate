@@ -4,13 +4,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground"
-    android:fitsSystemWindows="true">
+    android:background="?android:attr/colorBackground">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingBottom="0dp">
+        android:layout_height="match_parent">
 
         <!-- Chat Messages RecyclerView -->
         <androidx.recyclerview.widget.RecyclerView
@@ -20,9 +18,12 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:paddingTop="16dp"
-            android:paddingBottom="8dp"
+            android:paddingBottom="180dp"
             android:clipToPadding="false"
             android:scrollbars="vertical"
+            android:nestedScrollingEnabled="true"
+            android:overScrollMode="always"
+            android:isScrollContainer="true"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/controlsContainer"
             app:layout_constraintStart_toStartOf="parent"
@@ -34,6 +35,7 @@
             android:id="@+id/controlsContainer"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="56dp"
             app:cardElevation="8dp"
             app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="0dp"

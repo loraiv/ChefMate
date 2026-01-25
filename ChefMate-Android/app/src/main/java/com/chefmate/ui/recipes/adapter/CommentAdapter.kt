@@ -21,13 +21,14 @@ class CommentAdapter(
     private val onUserClick: (Comment) -> Unit,
     private val onDeleteClick: ((Comment) -> Unit)? = null,
     private val currentUserId: Long? = null,
-    private val depth: Int = 0
+    private val depth: Int = 0,
+    private val isAdmin: Boolean = false
 ) : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CommentViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_comment, parent, false)
-        return CommentViewHolder(view, onReplyClick, onLikeClick, onUserClick, onDeleteClick, currentUserId, depth)
+        return CommentViewHolder(view, onReplyClick, onLikeClick, onUserClick, onDeleteClick, currentUserId, depth, isAdmin)
     }
 
     override fun onBindViewHolder(holder: CommentViewHolder, position: Int) {
@@ -72,7 +73,8 @@ class CommentAdapter(
         private val onUserClick: (Comment) -> Unit,
         private val onDeleteClick: ((Comment) -> Unit)?,
         private val currentUserId: Long?,
-        private val depth: Int = 0
+        private val depth: Int = 0,
+        private val isAdmin: Boolean = false
     ) : RecyclerView.ViewHolder(itemView) {
         private val authorTextView: TextView = itemView.findViewById(R.id.commentAuthor)
         private val dateTextView: TextView = itemView.findViewById(R.id.commentDate)
@@ -160,21 +162,31 @@ class CommentAdapter(
 
             // Likes - use heart icon
             likesCountTextView.text = comment.likesCount.toString()
-            likeButton.setImageResource(
-                if (comment.isLiked) R.drawable.ic_heart_filled
-                else R.drawable.ic_heart
-            )
-            likeButton.setOnClickListener {
-                onLikeClick(comment)
-            }
+            
+            // Hide like and reply buttons for admins
+            if (isAdmin) {
+                likeButton.visibility = View.GONE
+                likesCountTextView.visibility = View.GONE
+                replyButton.visibility = View.GONE
+            } else {
+                likeButton.visibility = View.VISIBLE
+                likesCountTextView.visibility = View.VISIBLE
+                likeButton.setImageResource(
+                    if (comment.isLiked) R.drawable.ic_heart_filled
+                    else R.drawable.ic_heart
+                )
+                likeButton.setOnClickListener {
+                    onLikeClick(comment)
+                }
 
-            replyButton.visibility = View.VISIBLE
-            replyButton.setOnClickListener {
-                onReplyClick(comment)
+                replyButton.visibility = View.VISIBLE
+                replyButton.setOnClickListener {
+                    onReplyClick(comment)
+                }
             }
 
             val isOwnComment = currentUserId != null && comment.userId == currentUserId
-            if (isOwnComment && onDeleteClick != null) {
+            if ((isOwnComment || isAdmin) && onDeleteClick != null) {
                 deleteButton.visibility = View.VISIBLE
                 deleteButton.setOnClickListener {
                     onDeleteClick?.invoke(comment)
@@ -201,7 +213,8 @@ class CommentAdapter(
                         onUserClick,
                         onDeleteClick,
                         currentUserId,
-                        depth + 1
+                        depth + 1,
+                        isAdmin
                     )
                     repliesRecyclerView.layoutManager = LinearLayoutManager(itemView.context)
                     repliesRecyclerView.adapter = repliesAdapter

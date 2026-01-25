@@ -128,14 +128,14 @@ class AddRecipeFragment : Fragment() {
                     selectedImagePaths.add(it)
                     updateImagePreview()
                 } ?: run {
-                    Toast.makeText(requireContext(), "Error processing image", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Unable to process the image. Please try again.", Toast.LENGTH_SHORT).show()
                 }
             } ?: run {
-                Toast.makeText(requireContext(), "Error processing image", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Unable to process the image. Please try again.", Toast.LENGTH_SHORT).show()
             }
         } else if (result.resultCode == UCrop.RESULT_ERROR && result.data != null) {
             val cropError = UCrop.getError(result.data!!)
-            Toast.makeText(requireContext(), "Error processing image: ${cropError?.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Unable to crop the image. Please try again.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -394,7 +394,7 @@ class AddRecipeFragment : Fragment() {
             currentCameraImageUri = photoURI
             cameraLauncher.launch(photoURI)
         } catch (e: Exception) {
-            Toast.makeText(requireContext(), "Error opening camera: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Unable to open camera. Please check camera permissions.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -410,7 +410,7 @@ class AddRecipeFragment : Fragment() {
                     input.copyTo(output)
                 }
             } ?: run {
-                Toast.makeText(requireContext(), "Error reading image", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Unable to read the selected image. Please try again.", Toast.LENGTH_SHORT).show()
                 return
             }
             
@@ -450,7 +450,7 @@ class AddRecipeFragment : Fragment() {
         } catch (e: Exception) {
             e.printStackTrace()
             android.util.Log.e("AddRecipeFragment", "Error in startCrop: ${e.message}", e)
-            Toast.makeText(requireContext(), "Error processing image: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Unable to process the image. Please try again.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -699,7 +699,7 @@ class AddRecipeFragment : Fragment() {
                     }
                 }
                 .onFailure { exception ->
-                    Toast.makeText(requireContext(), "Error loading recipe: ${exception.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), "Unable to load recipe. Please try again.", Toast.LENGTH_LONG).show()
                 }
         }
     }
@@ -736,7 +736,7 @@ class AddRecipeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.recipeCreated.collect { recipe ->
                 recipe?.let {
-                    val message = if (isEditMode) "Recipe updated successfully!" else "Recipe created successfully!"
+                    val message = if (isEditMode) "Recipe updated successfully" else "Recipe created successfully"
                     Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                         requireActivity().onBackPressedDispatcher.onBackPressed()

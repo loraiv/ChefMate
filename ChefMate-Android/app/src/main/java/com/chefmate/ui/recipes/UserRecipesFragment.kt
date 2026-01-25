@@ -50,6 +50,7 @@ class UserRecipesFragment : Fragment() {
 
         val userId = arguments?.getLong("userId") ?: -1L
         val username = arguments?.getString("username") ?: ""
+        val isAdminView = arguments?.getBoolean("isAdminView", false) ?: false
         
         if (userId <= 0) {
             android.util.Log.e("UserRecipesFragment", "Invalid userId: $userId")
@@ -60,11 +61,16 @@ class UserRecipesFragment : Fragment() {
 
         val apiService = AppModule.provideApiService()
         val recipeRepository = RecipeRepository(apiService, tokenManager)
+        val adminRepository = if (isAdminView && tokenManager.isAdmin()) {
+            com.chefmate.data.repository.AdminRepository(tokenManager)
+        } else {
+            null
+        }
         val viewModelFactory = UserRecipesViewModelFactory(recipeRepository, userId, username)
         viewModel = androidx.lifecycle.ViewModelProvider(this, viewModelFactory)[UserRecipesViewModel::class.java]
 
         setupToolbar()
-        setupRecyclerView()
+        setupRecyclerView(isAdminView, adminRepository)
         hideSearchAndFilters()
         setupObservers()
 
@@ -135,18 +141,51 @@ class UserRecipesFragment : Fragment() {
         binding.filtersLayout.visibility = View.GONE
     }
 
-    private fun setupRecyclerView() {
+    private fun setupRecyclerView(isAdminView: Boolean, adminRepository: com.chefmate.data.repository.AdminRepository?) {
         adapter = RecipeAdapter(
             onRecipeClick = { recipe ->
-                navigateToRecipeDetail(recipe.id)
+                navigateToRecipeDetail(recipe.id, isAdminView)
             },
             onLikeClick = { recipe ->
                 viewModel.toggleLike(recipe)
-            }
+            },
+            onDeleteClick = if (isAdminView && adminRepository != null) { recipe ->
+                deleteRecipeAsAdmin(recipe.id, adminRepository)
+            } else null,
+            isAdminView = isAdminView
         )
 
         binding.recipesRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recipesRecyclerView.adapter = adapter
+    }
+
+    private fun deleteRecipeAsAdmin(recipeId: Long, adminRepository: com.chefmate.data.repository.AdminRepository) {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Delete Recipe")
+            .setMessage("Are you sure you want to delete this recipe? This action cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                lifecycleScope.launch {
+                    adminRepository.deleteRecipeAsAdmin(recipeId).fold(
+                        onSuccess = {
+                            Toast.makeText(requireContext(), "Recipe deleted successfully", Toast.LENGTH_SHORT).show()
+                            viewModel.loadUserRecipes() // Refresh list
+                        },
+                        onFailure = { error ->
+                            Toast.makeText(requireContext(), "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun navigateToRecipeDetail(recipeId: Long, isAdminView: Boolean) {
+        val bundle = Bundle().apply {
+            putLong("recipeId", recipeId)
+            putBoolean("isAdminView", isAdminView)
+        }
+        findNavController().navigate(R.id.action_userRecipesFragment_to_recipeDetailFragment, bundle)
     }
 
     private fun setupObservers() {
@@ -197,12 +236,6 @@ class UserRecipesFragment : Fragment() {
         }
     }
 
-    private fun navigateToRecipeDetail(recipeId: Long) {
-        val bundle = Bundle().apply {
-            putLong("recipeId", recipeId)
-        }
-        findNavController().navigate(R.id.action_userRecipesFragment_to_recipeDetailFragment, bundle)
-    }
 
     override fun onDestroyView() {
         super.onDestroyView()

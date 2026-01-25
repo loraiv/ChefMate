@@ -44,7 +44,7 @@ class RegisterActivity : AppCompatActivity() {
             val confirmPassword = binding.confirmPasswordEditText.text.toString().trim()
 
             if (username.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
-                Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Please fill in all required fields", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -266,17 +266,30 @@ class RegisterActivity : AppCompatActivity() {
                         username = authResponse.username,
                         email = authResponse.email,
                         firstName = authResponse.firstName,
-                        lastName = authResponse.lastName
+                        lastName = authResponse.lastName,
+                        role = authResponse.role
                     )
 
-                    Toast.makeText(this@RegisterActivity, "Registration successful!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@RegisterActivity, "Account created successfully! Welcome to ChefMate.", Toast.LENGTH_SHORT).show()
                     navigateToMain()
                 }
                 .onFailure { error ->
+                    val userFriendlyMessage = when {
+                        error.message?.contains("already taken", ignoreCase = true) == true -> 
+                            "This username is already taken. Please choose a different one."
+                        error.message?.contains("already in use", ignoreCase = true) == true -> 
+                            "This email is already registered. Please use a different email or sign in."
+                        error.message?.contains("network", ignoreCase = true) == true -> 
+                            "Network error. Please check your internet connection and try again."
+                        error.message?.contains("timeout", ignoreCase = true) == true -> 
+                            "Request timed out. Please try again."
+                        else -> 
+                            "Unable to create account. Please try again later."
+                    }
                     Toast.makeText(
                         this@RegisterActivity,
-                        "Error: ${error.message}",
-                        Toast.LENGTH_SHORT
+                        userFriendlyMessage,
+                        Toast.LENGTH_LONG
                     ).show()
                     binding.registerButton.isEnabled = true
                     binding.registerButton.text = "Register"

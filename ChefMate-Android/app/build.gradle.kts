@@ -17,6 +17,26 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Base URL for API
+        // For Android Emulator: use "http://10.0.2.2:8090/"
+        // For real device: use your computer's IP address, e.g., "http://192.168.1.11:8090/"
+        // To find your IP: Windows (ipconfig), Linux/Mac (ifconfig)
+        // Make sure your phone and computer are on the same WiFi network!
+        // NOTE: Change this to 10.0.2.2 if using Android Emulator
+        buildConfigField("String", "BASE_URL", "\"http://192.168.1.11:8090/\"")
+    }
+    
+    testOptions {
+        unitTests {
+            all {
+                // Allow reflection access for testing
+                it.jvmArgs = listOf(
+                    "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+                    "--add-opens=java.base/java.lang=ALL-UNNAMED"
+                )
+            }
+        }
     }
 
     buildTypes {
@@ -29,14 +49,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 
@@ -56,6 +77,9 @@ dependencies {
     
     // ViewPager2 for image swiping
     implementation("androidx.viewpager2:viewpager2:1.0.0")
+    
+    // SwipeRefreshLayout
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
@@ -83,9 +107,24 @@ dependencies {
     // We use Android's built-in SpeechRecognizer (already available)
     // For better accuracy, consider Google Cloud Speech-to-Text API
 
+    // Testing dependencies
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:5.3.1")
+    testImplementation("org.mockito:mockito-inline:5.2.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.9.0")
+
+    // Android UI Testing (Espresso)
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.5.1")
+    androidTestImplementation("androidx.test.espresso:espresso-contrib:3.5.1")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestImplementation("androidx.test:rules:1.5.0")
+    androidTestImplementation("androidx.fragment:fragment-testing:1.6.2")
+    androidTestImplementation("androidx.navigation:navigation-testing:2.7.4")
 }
 
 // kapt {

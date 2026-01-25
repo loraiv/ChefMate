@@ -180,4 +180,65 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("commentId") commentId: Long
     ): Response<Unit>
+
+    // ========== CHANGE USERNAME ==========
+    @PUT("api/auth/change-username")
+    suspend fun changeUsername(
+        @Header("Authorization") token: String,
+        @Body changeUsernameRequest: ChangeUsernameRequest
+    ): Response<Map<String, String>>
+
+    // ========== ADMIN ENDPOINTS ==========
+    @GET("api/admin/users")
+    suspend fun getAllUsers(
+        @Header("Authorization") token: String
+    ): Response<List<UserManagementResponse>>
+
+    @GET("api/admin/users/{userId}")
+    suspend fun getUserById(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: Long
+    ): Response<UserManagementResponse>
+
+    @POST("api/admin/users/{userId}/block")
+    suspend fun blockUser(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: Long
+    ): Response<Map<String, String>>
+
+    @POST("api/admin/users/{userId}/unblock")
+    suspend fun unblockUser(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: Long
+    ): Response<Map<String, String>>
+
+    @DELETE("api/admin/users/{userId}")
+    suspend fun deleteUser(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: Long
+    ): Response<Map<String, String>>
+
+    @POST("api/admin/promote-to-admin/{userId}")
+    suspend fun promoteToAdmin(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: Long
+    ): Response<Map<String, String>>
+
+    @POST("api/admin/demote-from-admin/{userId}")
+    suspend fun demoteFromAdmin(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: Long
+    ): Response<Map<String, String>>
+
+    @DELETE("api/admin/recipes/{recipeId}")
+    suspend fun deleteRecipeAsAdmin(
+        @Header("Authorization") token: String,
+        @Path("recipeId") recipeId: Long
+    ): Response<Map<String, String>>
+
+    @DELETE("api/admin/comments/{commentId}")
+    suspend fun deleteCommentAsAdmin(
+        @Header("Authorization") token: String,
+        @Path("commentId") commentId: Long
+    ): Response<Map<String, String>>
 }

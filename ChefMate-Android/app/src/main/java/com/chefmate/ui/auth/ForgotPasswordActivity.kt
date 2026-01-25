@@ -26,7 +26,7 @@ class ForgotPasswordActivity : AppCompatActivity() {
             
             setupClickListeners()
         } catch (e: Exception) {
-            Toast.makeText(this, "Error loading: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Unable to load the screen. Please try again.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -62,16 +62,18 @@ class ForgotPasswordActivity : AppCompatActivity() {
                 Log.d("ForgotPassword", "Attempting to send password reset for email: $email")
                 authRepository.forgotPassword(email)
                     .onSuccess { responseMap ->
-                        Log.d("ForgotPassword", "Password reset request successful")
+                        Log.d("ForgotPassword", "Password reset request successful. Response: $responseMap")
                         val token = responseMap["token"]
+                        val message = responseMap["message"]
                         
                         if (token != null) {
-                            val message = "Email service is not configured.\n\n" +
+                            // Email service is not configured, show token dialog
+                            val dialogMessage = "Email service is not configured.\n\n" +
                                     "Your reset token:\n$token\n\n" +
                                     "Copy this token and use it in the Reset Password screen."
                             android.app.AlertDialog.Builder(this@ForgotPasswordActivity)
                                 .setTitle("Password Reset Token")
-                                .setMessage(message)
+                                .setMessage(dialogMessage)
                                 .setPositiveButton("Copy Token") { _, _ ->
                                     val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                                     val clip = android.content.ClipData.newPlainText("Reset Token", token)
@@ -87,24 +89,32 @@ class ForgotPasswordActivity : AppCompatActivity() {
                                 .setNegativeButton("OK", null)
                                 .show()
                         } else {
-                            Toast.makeText(
-                                this@ForgotPasswordActivity,
-                                "Password reset instructions have been sent to your email address.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                finish()
-                            }, 2000)
+                            // Email was sent successfully
+                            val successMessage = message ?: "Password reset instructions have been sent to your email address.\n\nPlease check your email and click the link to reset your password."
+                            android.app.AlertDialog.Builder(this@ForgotPasswordActivity)
+                                .setTitle("Email Sent")
+                                .setMessage(successMessage)
+                                .setPositiveButton("OK") { _, _ ->
+                                    finish()
+                                }
+                                .show()
                         }
                         binding.sendResetButton.isEnabled = true
                         binding.sendResetButton.text = "Send Instructions"
                     }
                     .onFailure { error ->
                         Log.e("ForgotPassword", "Password reset failed: ${error.message}", error)
-                        val errorMessage = error.message ?: "Unknown error occurred"
+                        val userFriendlyMessage = when {
+                            error.message?.contains("network", ignoreCase = true) == true -> 
+                                "Network error. Please check your internet connection and try again."
+                            error.message?.contains("timeout", ignoreCase = true) == true -> 
+                                "Request timed out. Please try again."
+                            else -> 
+                                "Unable to send password reset email. Please try again later."
+                        }
                         Toast.makeText(
                             this@ForgotPasswordActivity,
-                            "Error: $errorMessage",
+                            userFriendlyMessage,
                             Toast.LENGTH_LONG
                         ).show()
                         binding.sendResetButton.isEnabled = true
@@ -114,7 +124,7 @@ class ForgotPasswordActivity : AppCompatActivity() {
                 Log.e("ForgotPassword", "Exception in sendPasswordReset", e)
                 Toast.makeText(
                     this@ForgotPasswordActivity,
-                    "Error: ${e.message}",
+                    "An unexpected error occurred. Please try again.",
                     Toast.LENGTH_LONG
                 ).show()
                 binding.sendResetButton.isEnabled = true

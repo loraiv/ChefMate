@@ -15,6 +15,7 @@ import com.bumptech.glide.Glide
 import com.chefmate.R
 import com.chefmate.data.repository.RecipeRepository
 import com.chefmate.data.repository.ShoppingRepository
+import com.chefmate.data.repository.AdminRepository
 import com.chefmate.databinding.FragmentRecipeDetailBinding
 import com.chefmate.di.AppModule
 import com.chefmate.ui.recipes.adapter.CommentAdapter
@@ -38,7 +39,12 @@ class RecipeDetailFragment : Fragment() {
         val apiService = AppModule.provideApiService()
         val recipeRepository = RecipeRepository(apiService, tokenManager)
         val shoppingRepository = ShoppingRepository(apiService, tokenManager)
-        RecipeDetailViewModelFactory(recipeRepository, shoppingRepository)
+        val adminRepository = if (tokenManager.isAdmin()) {
+            AdminRepository(tokenManager)
+        } else {
+            null
+        }
+        RecipeDetailViewModelFactory(recipeRepository, shoppingRepository, adminRepository)
     }
 
     private lateinit var ingredientAdapter: IngredientAdapter
@@ -60,9 +66,10 @@ class RecipeDetailFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val recipeId = arguments?.getLong("recipeId") ?: return
+        val isAdminView = arguments?.getBoolean("isAdminView", false) ?: false
 
         setupToolbar()
-        setupAdapters()
+        setupAdapters(isAdminView)
         setupObservers()
         setupClickListeners()
         setupComments(recipeId)
@@ -82,7 +89,7 @@ class RecipeDetailFragment : Fragment() {
         }
     }
 
-    private fun setupAdapters() {
+    private fun setupAdapters(isAdminView: Boolean = false) {
         ingredientAdapter = IngredientAdapter(mutableListOf<String>()) { }
         binding.ingredientsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.ingredientsRecyclerView.adapter = ingredientAdapter
@@ -93,6 +100,7 @@ class RecipeDetailFragment : Fragment() {
 
         val tokenManager = TokenManager(requireContext())
         val currentUserId = tokenManager.getUserId()?.toLongOrNull()
+        val isAdmin = tokenManager.isAdmin() || isAdminView
         
         commentAdapter = CommentAdapter(
             comments = comments,
@@ -107,7 +115,7 @@ class RecipeDetailFragment : Fragment() {
             onUserClick = { comment ->
                 if (comment.userId <= 0) {
                     android.util.Log.w("RecipeDetailFragment", "Invalid userId in comment: ${comment.userId}")
-                    Toast.makeText(requireContext(), "Invalid user", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Invalid user information", Toast.LENGTH_SHORT).show()
                     return@CommentAdapter
                 }
                 
@@ -120,7 +128,7 @@ class RecipeDetailFragment : Fragment() {
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("RecipeDetailFragment", "Error in onUserClick", e)
-                        Toast.makeText(requireContext(), "Error opening profile: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Unable to open profile. Please try again.", Toast.LENGTH_SHORT).show()
                     }
                 } ?: run {
                     android.util.Log.w("RecipeDetailFragment", "View is null, cannot navigate")
@@ -129,7 +137,8 @@ class RecipeDetailFragment : Fragment() {
             onDeleteClick = { comment ->
                 deleteComment(comment)
             },
-            currentUserId = currentUserId
+            currentUserId = currentUserId,
+            isAdmin = isAdmin
         )
         binding.commentsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.commentsRecyclerView.adapter = commentAdapter
@@ -290,8 +299,14 @@ class RecipeDetailFragment : Fragment() {
 
         val tokenManager = TokenManager(requireContext())
         val currentUserId = tokenManager.getUserId()?.toLongOrNull()
+        val isAdmin = tokenManager.isAdmin()
+        
         if (currentUserId != null && recipe.userId == currentUserId) {
             binding.editRecipeButton?.visibility = View.VISIBLE
+            binding.deleteRecipeButton?.visibility = View.VISIBLE
+        } else if (isAdmin) {
+            // Admins can delete any recipe
+            binding.editRecipeButton?.visibility = View.GONE
             binding.deleteRecipeButton?.visibility = View.VISIBLE
         } else {
             binding.editRecipeButton?.visibility = View.GONE
@@ -300,21 +315,34 @@ class RecipeDetailFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
+        val tokenManager = TokenManager(requireContext())
+        val isAdmin = tokenManager.isAdmin()
+        
         binding.likeButton.setOnClickListener {
             viewModel.recipe.value?.let { recipe ->
                 viewModel.toggleLike(recipe)
             }
         }
 
-        binding.addToShoppingListButton.setOnClickListener {
-            viewModel.recipe.value?.let { recipe ->
-                viewModel.addToShoppingList(recipe.id)
+        // Hide Add to Shopping List button for admins
+        if (isAdmin) {
+            binding.addToShoppingListButton.visibility = View.GONE
+        } else {
+            binding.addToShoppingListButton.setOnClickListener {
+                viewModel.recipe.value?.let { recipe ->
+                    viewModel.addToShoppingList(recipe.id)
+                }
             }
         }
 
-        binding.startCookingButton.setOnClickListener {
-            viewModel.recipe.value?.let { recipe ->
-                navigateToCookingMode(recipe.id)
+        // Hide Start Cooking button for admins
+        if (isAdmin) {
+            binding.startCookingButton.visibility = View.GONE
+        } else {
+            binding.startCookingButton.setOnClickListener {
+                viewModel.recipe.value?.let { recipe ->
+                    navigateToCookingMode(recipe.id)
+                }
             }
         }
 
@@ -326,12 +354,18 @@ class RecipeDetailFragment : Fragment() {
 
         binding.deleteRecipeButton?.setOnClickListener {
             viewModel.recipe.value?.let { recipe ->
-                viewModel.deleteRecipe(recipe.id)
+                viewModel.deleteRecipe(recipe.id, isAdmin)
             }
         }
 
-        binding.postCommentButton.setOnClickListener {
-            postComment()
+        // Hide Post Comment button for admins
+        if (isAdmin) {
+            binding.postCommentButton.visibility = View.GONE
+            binding.commentEditText.visibility = View.GONE
+        } else {
+            binding.postCommentButton.setOnClickListener {
+                postComment()
+            }
         }
     }
 
@@ -359,16 +393,16 @@ class RecipeDetailFragment : Fragment() {
                             updateCommentsCount(loadedComments.size)
                         } catch (e: Exception) {
                             android.util.Log.e("RecipeDetailFragment", "Error updating comments UI", e)
-                            Toast.makeText(requireContext(), "Error displaying comments", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "Unable to display comments. Please try again.", Toast.LENGTH_SHORT).show()
                         }
                     }
                     .onFailure { error ->
                         android.util.Log.e("RecipeDetailFragment", "Error loading comments", error)
-                        Toast.makeText(requireContext(), "Error loading comments: ${error.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Unable to load comments. Please try again.", Toast.LENGTH_SHORT).show()
                     }
             } catch (e: Exception) {
                 android.util.Log.e("RecipeDetailFragment", "Unexpected error in setupComments", e)
-                Toast.makeText(requireContext(), "Error loading comments", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Unable to load comments. Please try again.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -411,10 +445,16 @@ class RecipeDetailFragment : Fragment() {
                 android.util.Log.d("RecipeDetailFragment", "Reloading comments after posting...")
                 setupComments(recipeId)
                 
-                Toast.makeText(requireContext(), "Comment published", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Comment published successfully", Toast.LENGTH_SHORT).show()
             }.onFailure { error ->
                 android.util.Log.e("RecipeDetailFragment", "Error posting comment", error)
-                Toast.makeText(requireContext(), "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                val userFriendlyMessage = when {
+                    error.message?.contains("network", ignoreCase = true) == true -> 
+                        "Network error. Please check your internet connection and try again."
+                    else -> 
+                        "Unable to publish comment. Please try again."
+                }
+                Toast.makeText(requireContext(), userFriendlyMessage, Toast.LENGTH_SHORT).show()
             }
 
             binding.postCommentButton.isEnabled = true
@@ -439,32 +479,49 @@ class RecipeDetailFragment : Fragment() {
                 val recipeId = arguments?.getLong("recipeId") ?: return@launch
                 setupComments(recipeId)
             }.onFailure { error ->
-                Toast.makeText(requireContext(), "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                val userFriendlyMessage = when {
+                    error.message?.contains("network", ignoreCase = true) == true -> 
+                        "Network error. Please check your internet connection and try again."
+                    else -> 
+                        "Unable to publish comment. Please try again."
+                }
+                Toast.makeText(requireContext(), userFriendlyMessage, Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun deleteComment(comment: Comment) {
+        val tokenManager = TokenManager(requireContext())
+        val isAdmin = tokenManager.isAdmin()
+        
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle("Delete Comment")
             .setMessage("Are you sure you want to delete this comment?")
             .setPositiveButton("Delete") { _, _ ->
                 val recipeRepository = RecipeRepository(
                     AppModule.provideApiService(),
-                    TokenManager(requireContext())
+                    tokenManager
                 )
+                val adminRepository = if (isAdmin) AdminRepository(tokenManager) else null
 
                 lifecycleScope.launch {
-                    val result = recipeRepository.deleteComment(comment.id)
-
-                    result.onSuccess {
-                        Toast.makeText(requireContext(), "Comment deleted", Toast.LENGTH_SHORT).show()
-                        val recipeId = arguments?.getLong("recipeId") ?: return@launch
-                        setupComments(recipeId)
-                    }.onFailure { error ->
-                        android.util.Log.e("RecipeDetailFragment", "Error deleting comment", error)
-                        Toast.makeText(requireContext(), "Error deleting: ${error.message}", Toast.LENGTH_SHORT).show()
+                    val result = if (isAdmin && adminRepository != null) {
+                        adminRepository.deleteCommentAsAdmin(comment.id).map { true }
+                    } else {
+                        recipeRepository.deleteComment(comment.id)
                     }
+
+                    result.fold(
+                        onSuccess = {
+                            Toast.makeText(requireContext(), "Comment deleted successfully", Toast.LENGTH_SHORT).show()
+                            val recipeId = arguments?.getLong("recipeId") ?: return@launch
+                            setupComments(recipeId)
+                        },
+                        onFailure = { error ->
+                            android.util.Log.e("RecipeDetailFragment", "Error deleting comment", error)
+                            Toast.makeText(requireContext(), "Unable to delete comment. Please try again.", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -475,7 +532,15 @@ class RecipeDetailFragment : Fragment() {
         val totalCount = comments.sumOf { comment ->
             1 + (comment.replies?.size ?: 0)
         }
-        binding.commentsCountTextView.text = "$totalCount comments"
+        
+        if (totalCount == 0) {
+            binding.commentsCountTextView.text = "0 comments"
+            binding.noCommentsTextView.visibility = View.VISIBLE
+        } else {
+            val label = if (totalCount == 1) "comment" else "comments"
+            binding.commentsCountTextView.text = "$totalCount $label"
+            binding.noCommentsTextView.visibility = View.GONE
+        }
     }
 
     private fun setupImagePager(imageUrls: List<String>) {
@@ -541,7 +606,7 @@ class RecipeDetailFragment : Fragment() {
             
             if (recipeId <= 0) {
                 android.util.Log.w("RecipeDetailFragment", "Invalid recipeId: $recipeId")
-                Toast.makeText(requireContext(), "Invalid recipe", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Invalid recipe information", Toast.LENGTH_SHORT).show()
                 return
             }
             
@@ -552,7 +617,7 @@ class RecipeDetailFragment : Fragment() {
             findNavController().navigate(R.id.action_recipeDetailFragment_to_cookingModeFragment, bundle)
         } catch (e: Exception) {
             android.util.Log.e("RecipeDetailFragment", "Error navigating to cooking mode", e)
-            Toast.makeText(requireContext(), "Navigation error", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Unable to navigate. Please try again.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -582,15 +647,15 @@ class RecipeDetailFragment : Fragment() {
         } catch (e: IllegalStateException) {
             android.util.Log.e("RecipeDetailFragment", "Navigation error (IllegalState): ${e.message}", e)
             android.util.Log.e("RecipeDetailFragment", "Fragment state: isAdded=$isAdded, isResumed=$isResumed, view=${view != null}")
-            Toast.makeText(requireContext(), "Error opening profile. Please try again.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Unable to open profile. Please try again.", Toast.LENGTH_SHORT).show()
         } catch (e: IllegalArgumentException) {
             android.util.Log.e("RecipeDetailFragment", "Navigation error (IllegalArgument): ${e.message}", e)
-            Toast.makeText(requireContext(), "Error: Invalid user data", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Invalid user information. Please try again.", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             android.util.Log.e("RecipeDetailFragment", "Error navigating to user recipes", e)
             android.util.Log.e("RecipeDetailFragment", "Exception type: ${e.javaClass.simpleName}, message: ${e.message}")
             e.printStackTrace()
-            Toast.makeText(requireContext(), "Error opening profile: ${e.message ?: "Unknown error"}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Unable to open profile. Please try again.", Toast.LENGTH_SHORT).show()
         }
     }
 

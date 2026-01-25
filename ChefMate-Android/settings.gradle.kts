@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ChefMate-Android"
+rootProject.name = "chefmate-android"
 include(":app")

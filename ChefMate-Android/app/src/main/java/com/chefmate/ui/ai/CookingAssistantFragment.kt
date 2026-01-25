@@ -53,7 +53,7 @@ class CookingAssistantFragment : Fragment() {
         if (isGranted) {
             startVoiceRecognition()
         } else {
-            Toast.makeText(requireContext(), "Microphone permission is required for voice input", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), "Microphone permission is required to use voice input", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -83,11 +83,10 @@ class CookingAssistantFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        chatAdapter = ChatAdapter(emptyList())
-        binding.chatRecyclerView.layoutManager = LinearLayoutManager(requireContext()).apply {
-            stackFromEnd = true
-        }
+        chatAdapter = ChatAdapter()
+        binding.chatRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.chatRecyclerView.adapter = chatAdapter
+        binding.chatRecyclerView.setHasFixedSize(false)
     }
 
     private fun setupTextToSpeech() {
@@ -111,6 +110,8 @@ class CookingAssistantFragment : Fragment() {
         binding.autoSpeakSwitch.setOnCheckedChangeListener { _, isChecked ->
             autoSpeakEnabled = isChecked
             tokenManager.saveAutoSpeakEnabled(isChecked)
+            // Reset shouldSpeakResponse when toggle is changed
+            shouldSpeakResponse = false
         }
     }
 
@@ -123,56 +124,48 @@ class CookingAssistantFragment : Fragment() {
     }
 
     private fun setupBottomNavigationPadding() {
-        // Find the bottom navigation view from MainActivity and use its height
-        fun applyBottomMargin() {
+        // Set initial bottom margin for bottom navigation bar
+        binding.root.post {
             val activity = requireActivity()
             val bottomNavView = activity.findViewById<View>(com.chefmate.R.id.bottomNavigationView)
+            val initialMargin = if (bottomNavView != null && bottomNavView.visibility == View.VISIBLE && bottomNavView.height > 0) {
+                bottomNavView.height
+            } else {
+                (56 * resources.displayMetrics.density).toInt() // Default bottom navigation height
+            }
             
-            val rootInsets = ViewCompat.getRootWindowInsets(binding.root)
-            val imeInsets = rootInsets?.getInsets(WindowInsetsCompat.Type.ime())
-            val systemBarsInsets = rootInsets?.getInsets(WindowInsetsCompat.Type.systemBars())
+            val layoutParams = binding.controlsContainer.layoutParams as ConstraintLayout.LayoutParams
+            layoutParams.bottomMargin = initialMargin
+            binding.controlsContainer.layoutParams = layoutParams
+        }
+        
+        // Listen for keyboard show/hide and adjust bottom margin accordingly
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             
-            // If keyboard is visible, position above keyboard, otherwise above bottom navigation
-            val bottomMargin = if (imeInsets != null && imeInsets.bottom > 0) {
+            val bottomMargin = if (imeInsets.bottom > 0) {
                 // Keyboard is visible - position above keyboard
                 imeInsets.bottom
             } else {
                 // Keyboard is hidden - position above bottom navigation bar
-                val navigationBarHeight = if (bottomNavView != null && bottomNavView.visibility == View.VISIBLE && bottomNavView.height > 0) {
+                val activity = requireActivity()
+                val bottomNavView = activity.findViewById<View>(com.chefmate.R.id.bottomNavigationView)
+                if (bottomNavView != null && bottomNavView.visibility == View.VISIBLE && bottomNavView.height > 0) {
                     bottomNavView.height
                 } else {
-                    systemBarsInsets?.bottom ?: 0
+                    systemBarsInsets.bottom.takeIf { it > 0 } ?: (56 * resources.displayMetrics.density).toInt()
                 }
-                navigationBarHeight
             }
             
-            if (bottomMargin >= 0) {
-                val layoutParams = binding.controlsContainer.layoutParams as ConstraintLayout.LayoutParams
-                if (layoutParams.bottomMargin != bottomMargin) {
-                    layoutParams.bottomMargin = bottomMargin
-                    binding.controlsContainer.layoutParams = layoutParams
-                }
-            }
-        }
-        
-        // Apply after view is laid out
-        binding.root.post {
-            applyBottomMargin()
-        }
-        
-        // Listen for insets changes (keyboard show/hide)
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-            applyBottomMargin()
+            val layoutParams = binding.controlsContainer.layoutParams as ConstraintLayout.LayoutParams
+            layoutParams.bottomMargin = bottomMargin
+            binding.controlsContainer.layoutParams = layoutParams
+            
             insets
         }
-        
-        // Also listen for layout changes
-        binding.root.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                applyBottomMargin()
-            }
-        })
     }
+    
 
     private fun setupSpeechRecognizer() {
         mlKitSpeechRecognizer = MlKitSpeechRecognizer(requireContext())
@@ -185,8 +178,8 @@ class CookingAssistantFragment : Fragment() {
         // Setup callbacks
         mlKitSpeechRecognizer?.onResult = { recognizedText ->
             binding.messageEditText.setText(recognizedText)
-            // Auto-send voice input and enable speaking for response
-            shouldSpeakResponse = true
+            // Auto-send voice input and enable speaking for response only if auto-speak is enabled
+            shouldSpeakResponse = autoSpeakEnabled
             sendMessage(recognizedText)
             binding.voiceButton.setIconResource(R.drawable.ic_mic)
         }
@@ -237,10 +230,22 @@ class CookingAssistantFragment : Fragment() {
 
     private fun setupObservers() {
         viewLifecycleOwner.lifecycleScope.launch {
+            var previousSize = 0
             viewModel.chatMessages.collect { messages ->
-                chatAdapter = ChatAdapter(messages)
-                binding.chatRecyclerView.adapter = chatAdapter
-                binding.chatRecyclerView.scrollToPosition(messages.size - 1)
+                val wasEmpty = previousSize == 0
+                val currentSize = chatAdapter.itemCount
+                chatAdapter.submitList(messages) {
+                    // Scroll to bottom after adapter updates, but only if new message was added
+                    if (messages.isNotEmpty() && (messages.size > currentSize || wasEmpty)) {
+                        binding.chatRecyclerView.postDelayed({
+                            val lastPosition = messages.size - 1
+                            if (lastPosition >= 0 && lastPosition < chatAdapter.itemCount) {
+                                binding.chatRecyclerView.smoothScrollToPosition(lastPosition)
+                            }
+                        }, 100)
+                    }
+                }
+                previousSize = messages.size
             }
         }
 
@@ -265,11 +270,12 @@ class CookingAssistantFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.chatMessages.collect { messages ->
                 if (messages.isNotEmpty() && !messages.last().isUser) {
-                    // Speak if auto-speak is enabled OR if user used voice input
-                    if (autoSpeakEnabled || shouldSpeakResponse) {
+                    // Speak only if auto-speak is enabled
+                    if (autoSpeakEnabled) {
                         speakText(messages.last().message)
-                        shouldSpeakResponse = false // Reset after speaking
                     }
+                    // Reset shouldSpeakResponse after processing response
+                    shouldSpeakResponse = false
                 }
             }
         }

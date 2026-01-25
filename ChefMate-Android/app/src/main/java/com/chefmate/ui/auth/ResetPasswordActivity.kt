@@ -33,16 +33,16 @@ class ResetPasswordActivity : AppCompatActivity() {
                 }
             }
             
-            if (resetToken.isNullOrEmpty()) {
-                Toast.makeText(this, "Invalid reset link. Please request a new password reset.", Toast.LENGTH_LONG).show()
-                finish()
-                return
+            // If token is provided via intent, pre-fill it
+            if (!resetToken.isNullOrEmpty()) {
+                binding.tokenEditText.setText(resetToken)
+                binding.tokenEditText.isEnabled = false // Disable if provided via intent
             }
             
             setupClickListeners()
             setupPasswordToggles()
         } catch (e: Exception) {
-            Toast.makeText(this, "Error loading: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Unable to load the screen. Please try again.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -86,8 +86,14 @@ class ResetPasswordActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         binding.resetPasswordButton.setOnClickListener {
+            val token = binding.tokenEditText.text.toString().trim()
             val password = binding.passwordEditText.text.toString().trim()
             val confirmPassword = binding.confirmPasswordEditText.text.toString().trim()
+
+            if (token.isEmpty()) {
+                Toast.makeText(this, "Please enter the reset token from your email", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
             if (password.isEmpty() || confirmPassword.isEmpty()) {
                 Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
@@ -104,6 +110,7 @@ class ResetPasswordActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            resetToken = token
             resetPassword(password)
         }
 
@@ -126,7 +133,7 @@ class ResetPasswordActivity : AppCompatActivity() {
                         Log.d("ResetPassword", "Password reset successful")
                         Toast.makeText(
                             this@ResetPasswordActivity,
-                            "Password reset successfully! You can now login with your new password.",
+                            "Password reset successful! You can now sign in with your new password.",
                             Toast.LENGTH_LONG
                         ).show()
                         
@@ -139,10 +146,20 @@ class ResetPasswordActivity : AppCompatActivity() {
                     }
                     .onFailure { error ->
                         Log.e("ResetPassword", "Password reset failed: ${error.message}", error)
-                        val errorMessage = error.message ?: "Unknown error occurred"
+                        val userFriendlyMessage = when {
+                            error.message?.contains("Invalid", ignoreCase = true) == true || 
+                            error.message?.contains("expired", ignoreCase = true) == true -> 
+                                "This reset link is invalid or has expired. Please request a new password reset."
+                            error.message?.contains("already been used", ignoreCase = true) == true -> 
+                                "This reset link has already been used. Please request a new password reset."
+                            error.message?.contains("network", ignoreCase = true) == true -> 
+                                "Network error. Please check your internet connection and try again."
+                            else -> 
+                                "Unable to reset password. Please try again later."
+                        }
                         Toast.makeText(
                             this@ResetPasswordActivity,
-                            "Error: $errorMessage",
+                            userFriendlyMessage,
                             Toast.LENGTH_LONG
                         ).show()
                         binding.resetPasswordButton.isEnabled = true
@@ -152,7 +169,7 @@ class ResetPasswordActivity : AppCompatActivity() {
                 Log.e("ResetPassword", "Exception in resetPassword", e)
                 Toast.makeText(
                     this@ResetPasswordActivity,
-                    "Error: ${e.message}",
+                    "An unexpected error occurred. Please try again.",
                     Toast.LENGTH_LONG
                 ).show()
                 binding.resetPasswordButton.isEnabled = true

@@ -41,6 +41,19 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(com.chefmate.R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
 
+        // Hide certain tabs for admin users
+        val isAdmin = tokenManager.isAdmin()
+        val menu = binding.bottomNavigationView.menu
+        
+        // Always hide admin fragment from bottom navigation (only accessible from profile)
+        menu.findItem(com.chefmate.R.id.adminFragment)?.isVisible = false
+        
+        if (isAdmin) {
+            menu.findItem(com.chefmate.R.id.likedRecipesFragment)?.isVisible = false
+            menu.findItem(com.chefmate.R.id.shoppingListFragment)?.isVisible = false
+            menu.findItem(com.chefmate.R.id.cookingAssistantFragment)?.isVisible = false
+        }
+
         binding.bottomNavigationView.setupWithNavController(navController)
     }
 
@@ -65,6 +78,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 "addRecipe" -> {
                     navController.navigate(com.chefmate.R.id.addRecipeFragment)
+                }
+                "adminPanel" -> {
+                    navController.navigate(com.chefmate.R.id.adminFragment)
                 }
             }
         } catch (e: Exception) {

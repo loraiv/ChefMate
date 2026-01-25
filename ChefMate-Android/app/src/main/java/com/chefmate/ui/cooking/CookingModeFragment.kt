@@ -8,13 +8,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-<<<<<<< Updated upstream
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
-=======
 import android.speech.tts.TextToSpeech
->>>>>>> Stashed changes
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,6 +24,7 @@ import androidx.navigation.fragment.findNavController
 import com.chefmate.R
 import com.chefmate.data.api.models.RecipeResponse
 import com.chefmate.databinding.FragmentCookingModeBinding
+import com.chefmate.utils.MlKitSpeechRecognizer
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -42,15 +37,22 @@ class CookingModeFragment : Fragment() {
         CookingModeViewModelFactory(requireActivity().applicationContext)
     }
 
-<<<<<<< Updated upstream
-    private var speechRecognizer: SpeechRecognizer? = null
-    private var isListening = false
-=======
     private var mlKitSpeechRecognizer: MlKitSpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
     private var autoSpeakEnabled = true // Default to enabled
     private var timerFinishedDialogShown = false
     private var previousTimerState: CookingSessionState? = null
+    private var isListening = false
+    private var currentTtsText: String? = null
+    private var isTtsPaused = false
+    private var ttsPausedPosition: Int = 0
+    private var ttsUtteranceId: String = "tts_utterance"
+    private var ttsStartTime: Long = 0
+    private var ttsTotalDuration: Long = 0
+    private var ttsElapsedTime: Long = 0
+    private val ttsWordsPerMinute = 150 // Average speaking rate
+    private var ttsSentences: List<String> = emptyList()
+    private var ttsCurrentSentenceIndex: Int = 0
     
     private val timerUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -67,7 +69,6 @@ class CookingModeFragment : Fragment() {
             }
         }
     }
->>>>>>> Stashed changes
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -108,12 +109,15 @@ class CookingModeFragment : Fragment() {
             if (recipeId == -1L) {
                 android.util.Log.w("CookingModeFragment", "Invalid recipeId")
                 if (isAdded && view != null) {
-                    Toast.makeText(requireContext(), "Error: Recipe not found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Recipe not found. Please try again.", Toast.LENGTH_SHORT).show()
                     findNavController().navigateUp()
                 }
                 return
             }
 
+            // Setup toolbar
+            setupToolbar()
+            
             // Load recipe and start session
             loadRecipeAndStart(recipeId)
             setupTextToSpeech()
@@ -130,7 +134,7 @@ class CookingModeFragment : Fragment() {
             e.printStackTrace()
             if (isAdded && view != null) {
                 try {
-                    Toast.makeText(requireContext(), "Error initializing cooking mode: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Unable to start cooking mode. Please try again.", Toast.LENGTH_SHORT).show()
                     findNavController().navigateUp()
                 } catch (e2: Exception) {
                     android.util.Log.e("CookingModeFragment", "Error showing error message", e2)
@@ -155,6 +159,19 @@ class CookingModeFragment : Fragment() {
         }
     }
     
+    private fun setupToolbar() {
+        val toolbar = binding.toolbar
+        (requireActivity() as? androidx.appcompat.app.AppCompatActivity)?.let { activity ->
+            activity.setSupportActionBar(toolbar)
+            activity.supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            activity.supportActionBar?.setDisplayShowHomeEnabled(true)
+            activity.supportActionBar?.title = ""
+        }
+        toolbar.setNavigationOnClickListener {
+            findNavController().navigateUp()
+        }
+    }
+    
     private fun setupTextToSpeech() {
         if (!isAdded) return
         
@@ -165,6 +182,61 @@ class CookingModeFragment : Fragment() {
                     if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                         textToSpeech?.setLanguage(Locale.getDefault())
                     }
+                    
+                    // Setup UtteranceProgressListener to track TTS progress
+                    textToSpeech?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                        override fun onStart(utteranceId: String?) {
+                            android.util.Log.d("CookingModeFragment", "TTS started: $utteranceId")
+                        }
+                        
+                        override fun onDone(utteranceId: String?) {
+                            android.util.Log.d("CookingModeFragment", "TTS done: $utteranceId")
+                            if (isAdded && _binding != null) {
+                                requireActivity().runOnUiThread {
+                                    // Move to next sentence if available
+                                    if (utteranceId?.startsWith("sentence_") == true) {
+                                        val sentenceIndex = utteranceId.removePrefix("sentence_").toIntOrNull() ?: -1
+                                        if (sentenceIndex >= 0 && sentenceIndex < ttsSentences.size - 1) {
+                                            // Continue with next sentence
+                                            ttsCurrentSentenceIndex = sentenceIndex + 1
+                                            if (!isTtsPaused) {
+                                                speakNextSentence()
+                                            }
+                                        } else {
+                                            // All sentences done
+                                            isTtsPaused = false
+                                            ttsPausedPosition = 0
+                                            ttsElapsedTime = 0
+                                            ttsStartTime = 0
+                                            ttsTotalDuration = 0
+                                            ttsCurrentSentenceIndex = 0
+                                            updateTtsButtonStates()
+                                        }
+                                    } else {
+                                        // Old style - single utterance
+                                        isTtsPaused = false
+                                        ttsPausedPosition = 0
+                                        ttsElapsedTime = 0
+                                        ttsStartTime = 0
+                                        ttsTotalDuration = 0
+                                        updateTtsButtonStates()
+                                    }
+                                }
+                            }
+                        }
+                        
+                        override fun onError(utteranceId: String?) {
+                            android.util.Log.e("CookingModeFragment", "TTS error: $utteranceId")
+                            if (isAdded && _binding != null) {
+                                requireActivity().runOnUiThread {
+                                    isTtsPaused = false
+                                    ttsPausedPosition = 0
+                                    ttsElapsedTime = 0
+                                    updateTtsButtonStates()
+                                }
+                            }
+                        }
+                    })
                 }
             }
         } catch (e: Exception) {
@@ -201,7 +273,7 @@ class CookingModeFragment : Fragment() {
                         android.util.Log.e("CookingModeFragment", "Failed to load recipe", exception)
                         if (isAdded && _binding != null) {
                             binding.loadingIndicator.visibility = View.GONE
-                            Toast.makeText(requireContext(), "Error loading recipe: ${exception.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "Unable to load recipe. Please try again.", Toast.LENGTH_SHORT).show()
                             findNavController().navigateUp()
                         }
                     }
@@ -210,7 +282,7 @@ class CookingModeFragment : Fragment() {
                 e.printStackTrace()
                 if (isAdded && _binding != null) {
                     binding.loadingIndicator.visibility = View.GONE
-                    Toast.makeText(requireContext(), "Error loading recipe: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Unable to load recipe. Please try again.", Toast.LENGTH_SHORT).show()
                     findNavController().navigateUp()
                 }
             }
@@ -218,57 +290,6 @@ class CookingModeFragment : Fragment() {
     }
 
     private fun setupSpeechRecognizer() {
-<<<<<<< Updated upstream
-        if (SpeechRecognizer.isRecognitionAvailable(requireContext())) {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext())
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {
-                    isListening = true
-                    binding.microphoneButton.setIconResource(R.drawable.ic_pause)
-                }
-
-                override fun onBeginningOfSpeech() {}
-
-                override fun onRmsChanged(rmsdB: Float) {}
-
-                override fun onBufferReceived(buffer: ByteArray?) {}
-
-                override fun onEndOfSpeech() {
-                    isListening = false
-                    binding.microphoneButton.setIconResource(R.drawable.ic_mic)
-                }
-
-                override fun onError(error: Int) {
-                    isListening = false
-                    binding.microphoneButton.setIconResource(R.drawable.ic_mic)
-                    when (error) {
-                        SpeechRecognizer.ERROR_AUDIO -> Toast.makeText(requireContext(), "Audio error", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_CLIENT -> {}
-                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> Toast.makeText(requireContext(), "No microphone permission", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_NETWORK -> Toast.makeText(requireContext(), "Network error", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> Toast.makeText(requireContext(), "Network timeout", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_NO_MATCH -> Toast.makeText(requireContext(), "Speech not recognized", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> Toast.makeText(requireContext(), "Recognizer busy", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_SERVER -> Toast.makeText(requireContext(), "Server error", Toast.LENGTH_SHORT).show()
-                        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> Toast.makeText(requireContext(), "No speech detected", Toast.LENGTH_SHORT).show()
-                    }
-                }
-
-                override fun onResults(results: Bundle?) {
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) {
-                        val spokenText = matches[0]
-                        viewModel.sendVoiceMessage(spokenText)
-                    }
-                    isListening = false
-                    binding.microphoneButton.setIconResource(R.drawable.ic_mic)
-                }
-
-                override fun onPartialResults(partialResults: Bundle?) {}
-
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
-=======
         if (!isAdded) return
         
         try {
@@ -289,6 +310,7 @@ class CookingModeFragment : Fragment() {
         mlKitSpeechRecognizer?.onResult = { recognizedText ->
             viewModel.sendVoiceMessage(recognizedText)
             binding.microphoneButton.setIconResource(R.drawable.ic_mic)
+            isListening = false
         }
         
         mlKitSpeechRecognizer?.onError = { errorMessage ->
@@ -301,15 +323,16 @@ class CookingModeFragment : Fragment() {
             }
             // For "no speech detected" or "no match" errors, just silently reset
             binding.microphoneButton.setIconResource(R.drawable.ic_mic)
+            isListening = false
         }
         
-        mlKitSpeechRecognizer?.onListeningStateChanged = { isListening ->
-            if (isListening) {
+        mlKitSpeechRecognizer?.onListeningStateChanged = { listening ->
+            isListening = listening
+            if (listening) {
                 binding.microphoneButton.setIconResource(R.drawable.ic_pause)
             } else {
                 binding.microphoneButton.setIconResource(R.drawable.ic_mic)
             }
->>>>>>> Stashed changes
         }
     }
 
@@ -361,9 +384,36 @@ class CookingModeFragment : Fragment() {
         binding.stopAlarmButton.setOnClickListener {
             viewModel.stopTimer()
         }
+        
+        // TTS Control Buttons
+        binding.pauseTtsButton.setOnClickListener {
+            android.util.Log.d("CookingModeFragment", "Pause TTS button clicked")
+            pauseTts()
+        }
+        
+        binding.playTtsButton.setOnClickListener {
+            android.util.Log.d("CookingModeFragment", "Play TTS button clicked, isPaused: $isTtsPaused")
+            if (isTtsPaused) {
+                resumeTts()
+            } else {
+                startTts()
+            }
+        }
+        
+        binding.restartTtsButton.setOnClickListener {
+            android.util.Log.d("CookingModeFragment", "Restart TTS button clicked")
+            restartTts()
+        }
+        
+        // Make sure buttons are enabled and clickable
+        binding.pauseTtsButton.isEnabled = true
+        binding.playTtsButton.isEnabled = true
+        binding.restartTtsButton.isEnabled = true
     }
     
     private fun showTimerDialog() {
+        if (!isAdded || childFragmentManager == null) return
+        
         val dialog = TimerDialog()
         dialog.onTimerSet = { minutes, seconds, label ->
             val totalSeconds = minutes * 60L + seconds
@@ -399,12 +449,16 @@ class CookingModeFragment : Fragment() {
                 if (response != null) {
                     binding.aiResponseCard.visibility = View.VISIBLE
                     binding.aiResponseText.text = response
+                    currentTtsText = response
+                    updateTtsButtonStates()
                     // Automatically speak AI response only if enabled
                     if (autoSpeakEnabled) {
                         speakText(response)
                     }
                 } else {
                     binding.aiResponseCard.visibility = View.GONE
+                    currentTtsText = null
+                    updateTtsButtonStates()
                 }
             }
         }
@@ -459,14 +513,6 @@ class CookingModeFragment : Fragment() {
                 "No action"
             }
             binding.currentActionText.text = "Action: $currentStepText"
-
-            // Needed products (extract from current step or use recipe ingredients)
-            val neededProducts = if (state.currentStep < recipe.ingredients.size) {
-                recipe.ingredients[state.currentStep]
-            } else {
-                recipe.ingredients.joinToString(", ")
-            }
-            binding.neededProductsText.text = "Needed Products: $neededProducts"
             
             // Enable/disable navigation buttons
             binding.previousStepButton.isEnabled = state.currentStep > 0
@@ -562,28 +608,130 @@ class CookingModeFragment : Fragment() {
     }
 
     private fun startVoiceRecognition() {
-        if (!SpeechRecognizer.isRecognitionAvailable(requireContext())) {
-            Toast.makeText(requireContext(), "Speech recognition not available", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak...")
-        }
-
-        speechRecognizer?.startListening(intent)
+        if (!isAdded) return
+        
+        mlKitSpeechRecognizer?.startListening("en-US")
     }
 
     private fun stopVoiceRecognition() {
-        speechRecognizer?.stopListening()
+        mlKitSpeechRecognizer?.stopListening()
         isListening = false
-        binding.microphoneButton.setIconResource(android.R.drawable.ic_btn_speak_now)
+        binding.microphoneButton.setIconResource(R.drawable.ic_mic)
     }
     
     private fun speakText(text: String) {
-        textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        currentTtsText = text
+        isTtsPaused = false
+        ttsPausedPosition = 0
+        ttsElapsedTime = 0
+        ttsCurrentSentenceIndex = 0
+        
+        // Split text into sentences for better pause/resume control
+        ttsSentences = splitIntoSentences(text)
+        
+        // Start speaking from first sentence
+        speakNextSentence()
+        updateTtsButtonStates()
+    }
+    
+    private fun splitIntoSentences(text: String): List<String> {
+        // Split by sentence endings (. ! ?) followed by whitespace
+        val sentences = mutableListOf<String>()
+        val pattern = Regex("([^.!?]+[.!?]+\\s*)")
+        val matches = pattern.findAll(text)
+        
+        matches.forEach { match ->
+            val sentence = match.value.trim()
+            if (sentence.isNotEmpty()) {
+                sentences.add(sentence)
+            }
+        }
+        
+        // If no sentences found (no punctuation), treat whole text as one sentence
+        if (sentences.isEmpty()) {
+            sentences.add(text.trim())
+        }
+        
+        return sentences
+    }
+    
+    private fun speakNextSentence() {
+        if (ttsCurrentSentenceIndex < ttsSentences.size) {
+            val sentence = ttsSentences[ttsCurrentSentenceIndex]
+            val utteranceId = "sentence_$ttsCurrentSentenceIndex"
+            
+            val params = android.os.Bundle()
+            params.putString(android.speech.tts.TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
+            textToSpeech?.speak(sentence, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+            
+            ttsStartTime = System.currentTimeMillis()
+            android.util.Log.d("CookingModeFragment", "Speaking sentence $ttsCurrentSentenceIndex: $sentence")
+        }
+    }
+    
+    private fun pauseTts() {
+        textToSpeech?.stop()
+        isTtsPaused = true
+        // Keep current sentence index - we'll resume from the same sentence
+        updateTtsButtonStates()
+    }
+    
+    private fun resumeTts() {
+        // Resume from current sentence index (exact position!)
+        if (ttsCurrentSentenceIndex < ttsSentences.size) {
+            isTtsPaused = false
+            speakNextSentence()
+            updateTtsButtonStates()
+        } else {
+            // Already finished
+            isTtsPaused = false
+            ttsCurrentSentenceIndex = 0
+            updateTtsButtonStates()
+        }
+    }
+    
+    private fun restartTts() {
+        textToSpeech?.stop()
+        isTtsPaused = false
+        ttsPausedPosition = 0
+        ttsElapsedTime = 0
+        ttsStartTime = 0
+        ttsTotalDuration = 0
+        ttsCurrentSentenceIndex = 0
+        // Restart from first sentence
+        speakNextSentence()
+        updateTtsButtonStates()
+    }
+    
+    private fun startTts() {
+        // Start from first sentence
+        ttsCurrentSentenceIndex = 0
+        isTtsPaused = false
+        ttsPausedPosition = 0
+        speakNextSentence()
+        updateTtsButtonStates()
+    }
+    
+    private fun updateTtsButtonStates() {
+        if (!isAdded || _binding == null) return
+        
+        // Show/hide buttons based on TTS state
+        val hasText = currentTtsText != null && currentTtsText!!.isNotEmpty()
+        
+        if (hasText) {
+            binding.pauseTtsButton.visibility = if (!isTtsPaused) View.VISIBLE else View.GONE
+            binding.playTtsButton.visibility = if (isTtsPaused) View.VISIBLE else View.GONE
+            binding.restartTtsButton.visibility = View.VISIBLE
+            
+            // Enable/disable buttons
+            binding.pauseTtsButton.isEnabled = !isTtsPaused
+            binding.playTtsButton.isEnabled = isTtsPaused
+            binding.restartTtsButton.isEnabled = true
+        } else {
+            binding.pauseTtsButton.visibility = View.GONE
+            binding.playTtsButton.visibility = View.GONE
+            binding.restartTtsButton.visibility = View.GONE
+        }
     }
     
     private fun showTimerFinishedDialog(label: String?) {
@@ -605,9 +753,6 @@ class CookingModeFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-<<<<<<< Updated upstream
-        speechRecognizer?.destroy()
-=======
         try {
             requireContext().unregisterReceiver(timerUpdateReceiver)
         } catch (e: Exception) {
@@ -616,7 +761,6 @@ class CookingModeFragment : Fragment() {
         mlKitSpeechRecognizer?.destroy()
         textToSpeech?.stop()
         textToSpeech?.shutdown()
->>>>>>> Stashed changes
         _binding = null
     }
 }
@@ -632,4 +776,3 @@ class CookingModeViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
-

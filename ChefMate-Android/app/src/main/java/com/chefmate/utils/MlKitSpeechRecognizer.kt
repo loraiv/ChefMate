@@ -172,7 +172,7 @@ class MlKitSpeechRecognizer(private val context: Context) {
             val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageCode)
-                putExtra(RecognizerIntent.EXTRA_PROMPT, "Говорете...")
+                putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak...")
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             }

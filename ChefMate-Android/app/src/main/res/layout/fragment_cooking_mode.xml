@@ -7,9 +7,32 @@
     android:background="?android:attr/colorBackground"
     android:fitsSystemWindows="true">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+            app:navigationIcon="?attr/homeAsUpIndicator" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:scrollbars="vertical"
+        android:paddingBottom="100dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="16dp">
 
         <!-- Top Info Bar -->
         <com.google.android.material.card.MaterialCardView
@@ -76,17 +99,6 @@
                     android:textColor="?attr/colorOnSurface"
                     android:gravity="center" />
 
-                <!-- Needed Products -->
-                <TextView
-                    android:id="@+id/neededProductsText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Needed Products: Onion, knife, cutting board"
-                    android:textSize="14sp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:gravity="center"
-                    android:layout_marginTop="8dp" />
-
                 <!-- Timer Card -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/timerCard"
@@ -144,7 +156,9 @@
                             android:text=""
                             android:textSize="12sp"
                             android:textColor="?attr/colorOnSurfaceVariant"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="8dp"
+                            android:maxLines="2"
+                            android:ellipsize="end"
                             android:visibility="gone" />
                         
                         <LinearLayout
@@ -288,28 +302,129 @@
             android:id="@+id/aiResponseCard"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_margin="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="100dp"
             android:visibility="gone"
+            android:clickable="false"
+            android:focusable="false"
             app:cardElevation="4dp"
             app:cardCornerRadius="16dp"
             app:strokeWidth="0dp"
             app:layout_constraintTop_toBottomOf="@+id/microphoneButton"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintEnd_toEndOf="parent">
 
-            <TextView
-                android:id="@+id/aiResponseText"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="AI response..."
-                android:textSize="16sp"
-                android:textColor="?attr/colorOnSurface" />
+                android:orientation="vertical"
+                android:clipChildren="false"
+                android:clipToPadding="false">
+
+                <!-- TTS Control Buttons -->
+                <LinearLayout
+                    android:id="@+id/ttsControlsLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false">
+
+                    <!-- Pause Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/pauseTtsButton"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="8dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:enabled="true"
+                        app:icon="@android:drawable/ic_media_pause"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="24dp"
+                        app:iconTint="?attr/colorOnSurface"
+                        app:cornerRadius="24dp"
+                        app:backgroundTint="?attr/colorSurface"
+                        app:elevation="4dp"
+                        style="@style/Widget.MaterialComponents.Button.Icon" />
+
+                    <!-- Play/Resume Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/playTtsButton"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="8dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:enabled="true"
+                        app:icon="@android:drawable/ic_media_play"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="24dp"
+                        app:iconTint="@android:color/white"
+                        app:cornerRadius="24dp"
+                        app:backgroundTint="?attr/colorPrimary"
+                        app:elevation="4dp"
+                        style="@style/Widget.MaterialComponents.Button.Icon" />
+
+                    <!-- Restart Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/restartTtsButton"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:insetLeft="0dp"
+                        android:insetRight="0dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:enabled="true"
+                        app:icon="@android:drawable/ic_media_rew"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="24dp"
+                        app:iconTint="?attr/colorOnSurface"
+                        app:cornerRadius="24dp"
+                        app:backgroundTint="?attr/colorSurface"
+                        app:elevation="4dp"
+                        style="@style/Widget.MaterialComponents.Button.Icon" />
+
+                </LinearLayout>
+
+                <!-- AI Response Text -->
+                <TextView
+                    android:id="@+id/aiResponseText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:text="AI response..."
+                    android:textSize="16sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:lineSpacingMultiplier="1.2" />
+
+            </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.core.widget.NestedScrollView>
 
     <!-- Loading Indicator -->
     <ProgressBar

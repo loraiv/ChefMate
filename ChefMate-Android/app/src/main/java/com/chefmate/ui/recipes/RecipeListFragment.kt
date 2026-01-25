@@ -87,16 +87,22 @@ class RecipeListFragment : Fragment() {
         try {
             inflater.inflate(R.menu.toolbar_menu, menu)
             
-            // Increase icon size
-            val addRecipeItem = menu.findItem(R.id.menu_add_recipe)
-            val profileItem = menu.findItem(R.id.menu_profile)
+            val tokenManager = TokenManager(requireContext())
+            val isAdmin = tokenManager.isAdmin()
             
-            // Increase icon size
-            addRecipeItem?.icon?.let { icon ->
-                val size = (28 * resources.displayMetrics.density).toInt()
-                icon.setBounds(0, 0, size, size)
+            // Hide Add Recipe button for admins
+            val addRecipeItem = menu.findItem(R.id.menu_add_recipe)
+            if (isAdmin) {
+                addRecipeItem?.isVisible = false
+            } else {
+                // Increase icon size
+                addRecipeItem?.icon?.let { icon ->
+                    val size = (28 * resources.displayMetrics.density).toInt()
+                    icon.setBounds(0, 0, size, size)
+                }
             }
             
+            val profileItem = menu.findItem(R.id.menu_profile)
             profileItem?.icon?.let { icon ->
                 val size = (28 * resources.displayMetrics.density).toInt()
                 icon.setBounds(0, 0, size, size)

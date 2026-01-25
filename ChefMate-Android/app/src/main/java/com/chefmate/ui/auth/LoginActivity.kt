@@ -39,7 +39,7 @@ class LoginActivity : AppCompatActivity() {
                 loadRememberedCredentials()
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "Error loading: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Unable to load the login screen. Please try again.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -49,7 +49,7 @@ class LoginActivity : AppCompatActivity() {
             val password = binding.passwordEditText.text.toString().trim()
 
             if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Please enter both email and password", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -111,7 +111,6 @@ class LoginActivity : AppCompatActivity() {
             val rememberedPassword = tokenManager.getRememberedPassword()
             val isRememberMeEnabled = tokenManager.isRememberMeEnabled()
             
-            // Get all values directly from SharedPreferences to debug
             val prefs = getSharedPreferences("ChefMatePrefs", android.content.Context.MODE_PRIVATE)
             val directEmail = prefs.getString("remembered_email", null)
             val directPassword = prefs.getString("remembered_password", null)
@@ -185,7 +184,8 @@ class LoginActivity : AppCompatActivity() {
                         username = authResponse.username,
                         email = authResponse.email,
                         firstName = authResponse.firstName,
-                        lastName = authResponse.lastName
+                        lastName = authResponse.lastName,
+                        role = authResponse.role
                     )
 
                     // Save remember me credentials BEFORE navigating
@@ -219,14 +219,28 @@ class LoginActivity : AppCompatActivity() {
                         tokenManager.clearRememberMeCredentials()
                     }
 
-                    Toast.makeText(this@LoginActivity, "Login successful!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@LoginActivity, "Welcome back! Login successful.", Toast.LENGTH_SHORT).show()
                     navigateToMain()
                 }
                 .onFailure { error ->
+                    val userFriendlyMessage = when {
+                        error.message?.contains("Invalid", ignoreCase = true) == true -> 
+                            "Invalid email or password. Please check your credentials and try again."
+                        error.message?.contains("Cannot connect", ignoreCase = true) == true -> 
+                            error.message ?: "Cannot connect to server. Please check if the backend is running."
+                        error.message?.contains("Connection refused", ignoreCase = true) == true -> 
+                            "Connection refused. Please check if the backend server is running on port 8090."
+                        error.message?.contains("timeout", ignoreCase = true) == true -> 
+                            "Request timed out. Please check your internet connection and try again."
+                        error.message?.contains("network", ignoreCase = true) == true -> 
+                            error.message ?: "Network error. Please check your internet connection and try again."
+                        else -> 
+                            error.message ?: "Unable to sign in. Please try again later."
+                    }
                     Toast.makeText(
                         this@LoginActivity,
-                        "Error: ${error.message}",
-                        Toast.LENGTH_SHORT
+                        userFriendlyMessage,
+                        Toast.LENGTH_LONG
                     ).show()
                     binding.loginButton.isEnabled = true
                     binding.loginButton.text = "Login"
