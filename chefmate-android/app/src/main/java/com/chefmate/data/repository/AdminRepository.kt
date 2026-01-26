@@ -1,14 +1,17 @@
 package com.chefmate.data.repository
 
 import com.chefmate.data.api.ApiClient
+import com.chefmate.data.api.ApiService
 import com.chefmate.data.api.models.UserManagementResponse
 import com.chefmate.utils.TokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 
-class AdminRepository(private val tokenManager: TokenManager) {
-    private val apiService = ApiClient.apiService
+class AdminRepository(
+    private val tokenManager: TokenManager,
+    private val apiService: ApiService = ApiClient.apiService
+) {
 
     private fun getAuthToken(): String {
         val token = tokenManager.getToken() ?: throw IllegalStateException("No authentication token available")

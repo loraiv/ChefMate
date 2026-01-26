@@ -58,6 +58,9 @@ class ShoppingListViewModelTest {
         whenever(shoppingRepository.getMyShoppingList()).thenReturn(
             kotlin.Result.success(mockShoppingList)
         )
+        
+        // Update the flow to simulate repository updating it
+        (shoppingRepository.shoppingList as MutableStateFlow).value = mockShoppingList
 
         viewModel.loadShoppingList()
         advanceUntilIdle()

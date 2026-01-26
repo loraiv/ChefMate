@@ -1,6 +1,7 @@
 package com.chefmate.data.repository
 
 import com.chefmate.data.api.ApiClient
+import com.chefmate.data.api.ApiService
 import com.chefmate.data.api.models.AiRequest
 import com.chefmate.data.api.models.AiResponse
 import com.chefmate.utils.TokenManager
@@ -8,8 +9,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 
-class AiRepository(private val tokenManager: TokenManager) {
-    private val apiService = ApiClient.apiService
+class AiRepository(
+    private val tokenManager: TokenManager,
+    private val apiService: ApiService = ApiClient.apiService
+) {
 
     private fun getAuthToken(): String {
         val token = tokenManager.getToken()

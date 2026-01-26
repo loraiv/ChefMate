@@ -8,9 +8,11 @@ import com.chefmate.utils.TokenManager
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.*
+import org.robolectric.RobolectricTestRunner
 import okhttp3.ResponseBody
 import retrofit2.HttpException
 import retrofit2.Response
@@ -19,6 +21,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+@RunWith(RobolectricTestRunner::class)
 class AiRepositoryTest {
 
     @Mock
@@ -32,8 +35,7 @@ class AiRepositoryTest {
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        TestHelper.mockApiService(apiService)
-        aiRepository = AiRepository(tokenManager)
+        aiRepository = AiRepository(tokenManager, apiService)
     }
 
     @Test
@@ -70,11 +72,14 @@ class AiRepositoryTest {
     @Test
     fun `chatWithAI should handle network errors`() = runTest {
         whenever(tokenManager.getToken()).thenReturn("test_token")
-        whenever(apiService.chatWithAI(any(), any())).thenThrow(IOException("Network error"))
+        whenever(apiService.chatWithAI(any(), any())).thenAnswer {
+            throw java.io.IOException("Network error")
+        }
 
         val result = aiRepository.chatWithAI("Hello")
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull()!!.message!!.contains("Network error"))
+        val errorMessage = result.exceptionOrNull()?.message ?: ""
+        assertTrue(errorMessage.contains("Network error", ignoreCase = true))
     }
 
     @Test

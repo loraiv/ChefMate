@@ -1,6 +1,7 @@
 package com.chefmate.data.repository
 
 import com.chefmate.data.api.ApiClient
+import com.chefmate.data.api.ApiService
 import com.chefmate.data.api.models.AuthResponse
 import com.chefmate.data.api.models.ChangePasswordRequest
 import com.chefmate.data.api.models.ChangeUsernameRequest
@@ -16,8 +17,9 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import retrofit2.HttpException
 import java.io.File
 
-class AuthRepository {
-    private val apiService = ApiClient.apiService
+class AuthRepository(
+    private val apiService: ApiService = ApiClient.apiService
+) {
 
     suspend fun login(email: String, password: String): Result<AuthResponse> {
         return withContext(Dispatchers.IO) {

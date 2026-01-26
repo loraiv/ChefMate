@@ -14,23 +14,20 @@ import kotlinx.coroutines.test.resetMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.*
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @ExperimentalCoroutinesApi
+@RunWith(RobolectricTestRunner::class)
 class AiViewModelTest {
 
-    @Mock
     private lateinit var context: Context
-
-    @Mock
-    private lateinit var tokenManager: TokenManager
-
-    @Mock
-    private lateinit var aiRepository: AiRepository
 
     private lateinit var viewModel: AiViewModel
     private val testDispatcher = StandardTestDispatcher()
@@ -40,10 +37,8 @@ class AiViewModelTest {
         MockitoAnnotations.openMocks(this)
         kotlinx.coroutines.Dispatchers.setMain(testDispatcher)
         
-        // Mock TokenManager creation
-        whenever(TokenManager(context)).thenReturn(tokenManager)
-        // Mock AiRepository creation - we'll need to use reflection or make it injectable
-        // For now, we'll test with actual instances
+        // Use Robolectric to get a real Android context
+        context = RuntimeEnvironment.getApplication()
         viewModel = AiViewModel(context)
     }
 

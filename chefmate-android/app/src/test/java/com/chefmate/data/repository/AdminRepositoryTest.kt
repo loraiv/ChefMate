@@ -7,11 +7,14 @@ import com.chefmate.utils.TokenManager
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.*
+import org.robolectric.RobolectricTestRunner
 import retrofit2.Response
 
+@RunWith(RobolectricTestRunner::class)
 class AdminRepositoryTest {
 
     @Mock
@@ -25,9 +28,8 @@ class AdminRepositoryTest {
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        TestHelper.mockApiService(apiService)
         whenever(tokenManager.getToken()).thenReturn("Bearer test_token")
-        adminRepository = AdminRepository(tokenManager)
+        adminRepository = AdminRepository(tokenManager, apiService)
     }
 
     @Test

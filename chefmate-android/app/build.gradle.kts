@@ -115,6 +115,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.9.0")
+    testImplementation("org.robolectric:robolectric:4.11.1")
 
     // Android UI Testing (Espresso)
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

@@ -125,8 +125,10 @@ class AuthViewModelTest {
         )
 
         viewModel.login("test@example.com", "password")
-        // Check Loading state
-        val loadingState = viewModel.authState.first()
-        assertTrue(loadingState is AuthState.Loading || loadingState is AuthState.Success)
+        advanceUntilIdle()
+        
+        // Check final state - should be Success after Loading
+        val finalState = viewModel.authState.first()
+        assertTrue(finalState is AuthState.Success)
     }
 }

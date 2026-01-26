@@ -8,11 +8,14 @@ import com.chefmate.data.api.models.RegisterRequest
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.*
+import org.robolectric.RobolectricTestRunner
 import retrofit2.Response
 
+@RunWith(RobolectricTestRunner::class)
 class AuthRepositoryTest {
 
     @Mock
@@ -23,8 +26,7 @@ class AuthRepositoryTest {
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        TestHelper.mockApiService(apiService)
-        authRepository = AuthRepository()
+        authRepository = AuthRepository(apiService)
     }
 
     @Test

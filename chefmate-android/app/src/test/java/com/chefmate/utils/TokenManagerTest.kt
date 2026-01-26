@@ -31,10 +31,8 @@ class TokenManagerTest {
         whenever(sharedPreferences.edit()).thenReturn(editor)
         whenever(editor.putString(any(), any())).thenReturn(editor)
         whenever(editor.putBoolean(any(), any())).thenReturn(editor)
-        whenever(editor.putInt(any(), any())).thenReturn(editor)
         whenever(editor.remove(any())).thenReturn(editor)
         whenever(editor.apply()).then {}
-        whenever(editor.commit()).thenReturn(true)
         
         tokenManager = TokenManager(context)
     }
@@ -61,6 +59,10 @@ class TokenManagerTest {
         verify(editor).remove("user_id")
         verify(editor).remove("user_username")
         verify(editor).remove("user_email")
+        verify(editor).remove("user_first_name")
+        verify(editor).remove("user_last_name")
+        verify(editor).remove("user_role")
+        verify(editor).remove("profile_image_path")
         verify(editor).apply()
     }
 
