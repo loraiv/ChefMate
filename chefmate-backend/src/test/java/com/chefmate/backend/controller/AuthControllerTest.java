@@ -9,6 +9,7 @@ import com.chefmate.backend.entity.User;
 import com.chefmate.backend.repository.UserRepository;
 import com.chefmate.backend.service.AuthService;
 import com.chefmate.backend.service.JwtService;
+import com.chefmate.backend.service.FileStorageService;
 import com.chefmate.backend.service.UserService;
 import com.chefmate.backend.utils.JwtUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,6 +47,9 @@ class AuthControllerTest {
 
     @MockBean
     private UserRepository userRepository;
+
+    @MockBean
+    private FileStorageService fileStorageService;
 
     @Autowired
     private ObjectMapper objectMapper;

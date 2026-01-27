@@ -11,12 +11,14 @@ import com.chefmate.backend.dto.UserProfileResponse;
 import com.chefmate.backend.entity.User;
 import com.chefmate.backend.repository.UserRepository;
 import com.chefmate.backend.service.AuthService;
+import com.chefmate.backend.service.FileStorageService;
 import com.chefmate.backend.service.JwtService;
 import com.chefmate.backend.service.UserService;
 import com.chefmate.backend.utils.JwtUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,12 +31,18 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserService userService;
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
 
-    public AuthController(AuthService authService, JwtService jwtService, UserService userService, UserRepository userRepository) {
+    public AuthController(AuthService authService,
+                          JwtService jwtService,
+                          UserService userService,
+                          UserRepository userRepository,
+                          FileStorageService fileStorageService) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.userService = userService;
         this.userRepository = userRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     @PostMapping("/register")
@@ -226,6 +234,64 @@ public class AuthController {
     }
 
     /**
+     * Upload or change profile image for current user
+     */
+    @PostMapping(value = "/upload-profile-image", consumes = {"multipart/form-data"})
+    public ResponseEntity<?> uploadProfileImage(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @RequestPart("image") MultipartFile image) {
+        try {
+            Long userId = JwtUtils.getUserIdFromToken(token, jwtService);
+            if (userId == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Please sign in to continue");
+                return ResponseEntity.status(401).body(error);
+            }
+
+            if (image == null || image.isEmpty()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "No image file provided");
+                return ResponseEntity.status(400).body(error);
+            }
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Delete old profile image file if exists
+            String existingUrl = user.getProfileImageUrl();
+            if (existingUrl != null && !existingUrl.isBlank()) {
+                String fileName = existingUrl.replaceFirst("^/uploads/?", "");
+                if (!fileName.isBlank()) {
+                    try {
+                        fileStorageService.deleteFile(fileName);
+                    } catch (RuntimeException ignored) {
+                        // Not critical if old file cannot be deleted
+                    }
+                }
+            }
+
+            // Store new image
+            String storedFileName = fileStorageService.storeFile(image);
+            String imageUrl = "/uploads/" + storedFileName;
+
+            user.setProfileImageUrl(imageUrl);
+            userRepository.save(user);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("imageUrl", imageUrl);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(400).body(error);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Unable to upload profile image. Please try again later.");
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    /**
      * Web endpoint for password reset link that redirects to the Android app deep link
      * This allows the link to work in browsers and redirect to the app
      */
@@ -272,5 +338,51 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK)
             .header("Content-Type", "text/html; charset=UTF-8")
             .body(html);
+    }
+
+    /**
+     * Delete profile image for current user
+     */
+    @DeleteMapping("/delete-profile-image")
+    public ResponseEntity<?> deleteProfileImage(
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        try {
+            Long userId = JwtUtils.getUserIdFromToken(token, jwtService);
+            if (userId == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Please sign in to continue");
+                return ResponseEntity.status(401).body(error);
+            }
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            String existingUrl = user.getProfileImageUrl();
+            if (existingUrl != null && !existingUrl.isBlank()) {
+                String fileName = existingUrl.replaceFirst("^/uploads/?", "");
+                if (!fileName.isBlank()) {
+                    try {
+                        fileStorageService.deleteFile(fileName);
+                    } catch (RuntimeException ignored) {
+                        // ignore delete failure
+                    }
+                }
+            }
+
+            user.setProfileImageUrl(null);
+            userRepository.save(user);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Profile image deleted successfully");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(400).body(error);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Unable to delete profile image. Please try again later.");
+            return ResponseEntity.status(500).body(error);
+        }
     }
 }
