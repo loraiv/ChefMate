@@ -30,7 +30,7 @@ public class OpenApiConfig {
                 .title("ChefMate API")
                 .version("1.0.0")
                 .description("""
-                    ## 🍳 ChefMate Recipe Management System API
+                    ## ChefMate Recipe Management System API
                     
                     **Features:**
                     - User authentication (Register/Login with JWT)

@@ -45,7 +45,7 @@ class CookingAssistantFragment : Fragment() {
     private var shouldSpeakResponse = false // Only speak if user used voice input
     private lateinit var tokenManager: TokenManager
     private var autoSpeakEnabled = false
-    private var ttsLanguage = Locale.US // Default to English for better quality
+    private var ttsLanguage = Locale.US
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()

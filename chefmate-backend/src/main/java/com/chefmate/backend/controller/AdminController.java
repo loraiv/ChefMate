@@ -128,10 +128,7 @@ public class AdminController {
         }
     }
 
-    /**
-     * Creates an admin account (only for initial setup)
-     * WARNING: This should be disabled in production after creating the first admin!
-     */
+
     @PostMapping("/create-admin")
     public ResponseEntity<Map<String, Object>> createAdmin(
             @RequestParam String username,
@@ -249,7 +246,6 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
 
-    // ========== USER MANAGEMENT ==========
 
     /**
      * Get all users (admin only)
@@ -406,7 +402,6 @@ public class AdminController {
         }
     }
 
-    // ========== CONTENT MODERATION ==========
 
     /**
      * Delete a recipe (admin only)
