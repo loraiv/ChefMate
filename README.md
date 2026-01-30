@@ -14,8 +14,6 @@
 - [Project Structure](#project-structure)
 - [API Documentation](#api-documentation)
 - [Testing](#testing)
-- [Environment Variables](#environment-variables)
-- [License](#license)
 
 ---
 
